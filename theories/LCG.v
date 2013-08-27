@@ -253,9 +253,9 @@ Proof.
   by apply eq_bigr => i _; rewrite exp1n mul1n.
 Qed.
 
-Goal forall m n, \sum_(n <= k < m) 'C(k, n) = 'C(m, n.+1).
+Lemma binomial_sum m n : \sum_(n <= k < m) 'C(k, n) = 'C(m, n.+1).
 Proof.
-  elim.
+  elim: m n.
   - by move => n; rewrite big_nil bin0n.
   - move => m IH [].
     - by rewrite bin1 (eq_bigr _ (fun n _ => bin0 n))
@@ -266,12 +266,13 @@ Proof.
         by move/eqP: H => ->; rewrite big_nil.
       - rewrite binS -!IH.
         move/eqP/negP: H; rewrite -ltnNge => H.
-        rewrite {1}/index_iota subSS -{1}add1n
-                iota_addl big_map -/(index_iota n m).
-        rewrite (@eq_bigr _ _ _ _ _ _ (fun j => 'C(1 + j, n.+1))
-                          (fun j => 'C(j, n.+1) + 'C(j, n))) //.
-        Search _ bigop eq.
-
+        by rewrite
+          {1}/index_iota subSS -{1}add1n iota_addl big_map -/(index_iota n m)
+          (eq_bigr (fun j => 'C(j, n.+1) + 'C(j, n))) //
+          -(add0n (\sum_(n.+1 <= _ < m) _)) -{2}(bin_small (leqnn n.+1))
+          -(big_cons 0 addn n (index_iota n.+1 m) xpredT) /index_iota
+          -/(iota n (m - n.+1).+1) subnSK // -big_split /=.
+Qed.
 
 Module LCG.
 Section LCG'.
