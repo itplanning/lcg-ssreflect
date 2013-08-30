@@ -5,7 +5,7 @@ Require Import
   Ssreflect.finset Ssreflect.binomial.
 Require Import Coq.Program.Wf LCG.seq_ext.
 
-Theorem well_founded_lt : well_founded (fun n m => n < m).
+Theorem well_founded_lt : well_founded (fun x y => x < y).
 Proof.
   move => x.
   move: {2}x (leqnn x) => n.
@@ -18,39 +18,8 @@ Proof.
     apply (leq_trans H0 H).
 Defined.
 
-Lemma eqn_modDmull m n x y :
-  coprime m n -> (n * x == n * y %[mod m]) = (x == y %[mod m]).
-Proof.
-  move => H; move: x y.
-  have H0: forall x y,
-             y <= x -> (n * x == n * y %[mod m]) = (x == y %[mod m]) => x y.
-    move => H0.
-    rewrite !eqn_mod_dvd //; last rewrite leq_mul2l H0 orbT //.
-    by rewrite -mulnBr Gauss_dvdr.
-  case/orP: (leq_total x y);
-    first rewrite [X in X = _]eq_sym [X in _ = X]eq_sym; apply H0.
-Qed.
-
-Lemma eqn_modDmulr m n x y :
-  coprime m n -> (x * n == y * n %[mod m]) = (x == y %[mod m]).
-Proof.
-  by rewrite -!(mulnC n); apply eqn_modDmull.
-Qed.
-
 Lemma leqpp m n : m <= n -> m.-1 <= n.-1.
-Proof.
-  by case: m => //=; case: n.
-Qed.
-
-Lemma subpp m n : (0 < m) == (0 < n) -> m.-1 - n.-1 = m - n.
-Proof.
-  by case: m => [| m]; case: n.
-Qed.
-
-Lemma mulnp m n : 0 < m -> 0 < n -> (m * n).-1 = n.-1 + (m.-1 * n).
-Proof.
-  by case: m => // m; case: n.
-Qed.
+Proof. by case: m => //=; case: n. Qed.
 
 Lemma mulnr_inj n : 0 < n -> injective (muln n).
 Proof.
@@ -64,12 +33,167 @@ Proof.
   by move/(f_equal (divn^~ n.+1)); rewrite !mulnK.
 Qed.
 
-Lemma expn_sub : forall x m n, m <= n -> x ^ n - x ^ m = (x ^ m) * (x ^ (n - m)).-1.
+Lemma expn_sub x m n : m <= n -> x ^ n - x ^ m = (x ^ m) * (x ^ (n - m)).-1.
 Proof.
-  move => x; elim => //=.
-  - by move => n H; rewrite expn0 subn1 mul1n subn0.
-  - move => n IH [| m] //=; rewrite ltnS => H.
-    by rewrite subSS !expnS -mulnBr (IH m H) mulnA.
+  by move/subnK => {1}<-; rewrite expnD -{2}(mul1n (x ^ m)) -mulnBl subn1 mulnC.
+Qed.
+
+Fixpoint iedivn_rec (d m n : nat) : nat * nat :=
+  match d with
+    | 0 => (0, m)
+    | d'.+1 =>
+      match edivn m n with
+        | (m', 0) =>
+          let (x, y) := iedivn_rec d' m' n in (x.+1, y)
+        | _ => (0, m)
+      end
+  end.
+
+Definition iedivn m n := nosimpl (iedivn_rec m) m n.
+
+Definition idivn m n := fst (iedivn m n).
+
+Definition imodn m n := snd (iedivn m n).
+
+Lemma iedivn_recdepth d d' m n :
+  m < n ^ d -> m < n ^ d' -> 0 < m -> iedivn_rec d m n = iedivn_rec d' m n.
+Proof.
+  elim: d d' m => //=.
+  - by rewrite expn0 => d' [].
+  - move => d IH [].
+    - by rewrite expn0 => [[]].
+    - move => d' m /=.
+      rewrite edivn_def !expnS.
+      case: (eqVneq (m %% n) 0).
+      - move => H; rewrite H.
+        move/eqP/divnK: (H) => {1 2}<-; rewrite mulnC.
+        rewrite !ltn_mul2l; case/andP => H0 H1; case/andP => _ H2 H3.
+        rewrite (IH d') // divn_gt0 //.
+        move/eqP in H; apply (dvdn_leq H3 H).
+      - by rewrite -lt0n; move/prednK => <- /=.
+Qed.
+
+Lemma iedivn_recdepth' d d' m n :
+  m <= d -> m <= d' -> 0 < m -> 1 < n -> iedivn_rec d m n = iedivn_rec d' m n.
+Proof.
+  by move => *; apply iedivn_recdepth => //;
+    (apply leq_trans with (n ^ m); [ apply ltn_expl | rewrite leq_exp2l]).
+Qed.
+
+Lemma iedivnE m n : iedivn m n = (idivn m n, imodn m n).
+Proof. by rewrite /idivn /imodn; case: (iedivn m n). Qed.
+
+Lemma iedivnE' m n : m = imodn m n * n ^ idivn m n.
+Proof.
+  rewrite /imodn /idivn /iedivn /=.
+  move: {2 4}m => d.
+  elim: d m.
+  - by move => m; rewrite /= expn0 muln1.
+  - move => /= d IH m.
+    rewrite edivn_def.
+    case: (eqVneq (m %% n) 0).
+    - move => H; rewrite H.
+      move/eqP/divnK: H => {1}<-.
+      rewrite {1}(IH (m %/ n)).
+      case: (iedivn_rec _ _ _) => /= x y.
+      by rewrite expnSr mulnA.
+    - rewrite -lt0n.
+      move/prednK => <- /=.
+      by rewrite expn0 muln1.
+Qed.
+
+Lemma idiv0n n : idivn 0 n = 0.
+Proof. done. Qed.
+
+Lemma imod0n n : imodn 0 n = 0.
+Proof. done. Qed.
+
+Lemma idivn0 n : idivn n 0 = 0.
+Proof. by case: n. Qed.
+
+Lemma imodn0 n : imodn n 0 = n.
+Proof. by case: n. Qed.
+
+Lemma idiv1n n : 1 < n -> idivn 1 n = 0.
+Proof. by rewrite /idivn /iedivn /= edivn_def; move: n => [] // []. Qed.
+
+Lemma imod1n n : imodn 1 n = 1.
+Proof. by rewrite /imodn /iedivn /= edivn_def; move: n => [] // []. Qed.
+
+Lemma idivn1 n : idivn n 1 = n.
+Proof.
+  rewrite /idivn /iedivn.
+  elim: {1 3}n => //= n'.
+  rewrite edivn_def modn1 divn1 /=.
+  by case: iedivn_rec => //= a _ ->.
+Qed.
+
+Lemma imodn1 n : imodn n 1 = n.
+Proof.
+  rewrite /imodn /iedivn.
+  elim: {1}n => //= n'.
+  rewrite edivn_def modn1 divn1 /=.
+  by case: iedivn_rec.
+Qed.
+
+Lemma idivnn n : 0 < n -> idivn n n = 1.
+Proof.
+  by move: n => [] // [] // n; rewrite /idivn /iedivn /= !edivn_def modnn divnn.
+Qed.
+
+Lemma imodnn n : 0 < n -> imodn n n = 1.
+Proof.
+  by move: n => [] // [] // n; rewrite /imodn /iedivn /= !edivn_def modnn divnn.
+Qed.
+
+Lemma idivn_eq0 m n : 0 < m -> (idivn m n == 0) = ~~ (n %| m).
+Proof.
+  rewrite /idivn /iedivn /dvdn.
+  case: m => //= m _.
+  rewrite edivn_def.
+  by case: (m.+1 %% n) => //; case: iedivn_rec.
+Qed.
+
+Lemma idivn_muln m n : 0 < m -> 1 < n -> idivn (n * m) n = (idivn m n).+1.
+Proof.
+  move => H H0.
+  rewrite /idivn /iedivn (iedivn_recdepth (n * m) m.+1 (n * m) n) /=.
+  - by rewrite edivn_def modnMr mulKn ?(ltnW H0) //; case: iedivn_rec.
+  - by apply ltn_expl.
+  - by rewrite expnS ltn_mul2l (ltnW H0) /=; apply ltn_expl.
+  - by rewrite muln_gt0 H (ltnW H0).
+Qed.
+
+Lemma expn_idivnl m n : 1 < n -> idivn (n ^ m) n = m.
+Proof.
+  move => H.
+  elim: m => //=.
+  - by rewrite expn0 idiv1n.
+  - by move => m IH; rewrite expnS idivn_muln // ?IH // expn_gt0 (ltnW H).
+Qed.
+
+Lemma expn_idivnr m n e : 1 < n -> 0 < e -> idivn m (n ^ e) = idivn m n %/ e.
+Proof.
+Admitted.
+
+Lemma idivn_spec (m n r : nat) :
+  0 < m -> 1 < n -> (idivn m n == r) = (n ^ r %| m) && ~~(n ^ r.+1 %| m).
+Proof.
+  elim: r m.
+  - by move => m; rewrite expn0 expn1 dvd1n /= => H _; apply idivn_eq0.
+  - move => r IH m H H0.
+    rewrite 2!(expnS n).
+    case: (eqVneq (n %| m) true).
+    - move => H1.
+      have H2: 0 < m %/ n by rewrite divn_gt0 ?(ltnW H0) // dvdn_leq.
+      move/divnK: H1; rewrite mulnC => <-.
+      rewrite idivn_muln // eqSS.
+      do 2 rewrite dvdn_pmul2l ?(ltnW H0) //.
+      by apply IH.
+    - rewrite eq_sym negb_eqb /=; move => H1; apply negb_inj; move: H1.
+      rewrite negb_and; do 2 rewrite -idivn_eq0 //.
+      move/eqP => H1; rewrite H1 {1}/eq_op /=; apply/esym/orP; left.
+      by rewrite -expnS expn_idivnr // H1 div0n.
 Qed.
 
 Lemma poly1_eq1 x n :
@@ -126,6 +250,25 @@ Proof.
   - by move => n _; rewrite !subn0 expn0 mul1n.
   - move => n IH [] //= m.
     by rewrite ltnS !subSS -mulnBl mulnC expnS -mulnA => H; f_equal; apply IH.
+Qed.
+
+Lemma eqn_modDmull m n x y :
+  coprime m n -> (n * x == n * y %[mod m]) = (x == y %[mod m]).
+Proof.
+  move => H; move: x y.
+  have H0: forall x y,
+             y <= x -> (n * x == n * y %[mod m]) = (x == y %[mod m]) => x y.
+    move => H0.
+    rewrite !eqn_mod_dvd //; last rewrite leq_mul2l H0 orbT //.
+    by rewrite -mulnBr Gauss_dvdr.
+  case/orP: (leq_total x y);
+    first rewrite [X in X = _]eq_sym [X in _ = X]eq_sym; apply H0.
+Qed.
+
+Lemma eqn_modDmulr m n x y :
+  coprime m n -> (x * n == y * n %[mod m]) = (x == y %[mod m]).
+Proof.
+  by rewrite -!(mulnC n); apply eqn_modDmull.
 Qed.
 
 Lemma coprime_ppS m n : 0 < m -> coprime m (n * \prod_(p <- primes m) p).+1.
