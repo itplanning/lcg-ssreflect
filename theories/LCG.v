@@ -45,8 +45,8 @@ Notation rseq n x := (iterseq n nextr x).
 Definition full_period n := uniq (rseq cM n) && (iter cM nextr n == n).
 
 (*
-full_period': equivalent proposition of (forall x, full_period x)s
-tee: http://en.wikipedia.org/wiki/Linear_congruential_generator#Period_length
+full_period': equivalent proposition of (forall x, full_period x)
+see: http://en.wikipedia.org/wiki/Linear_congruential_generator#Period_length
 *)
 Definition full_period' :=
   [&& 0 < cA, coprime cM cC &
