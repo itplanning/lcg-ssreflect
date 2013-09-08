@@ -150,12 +150,6 @@ Proof.
     by rewrite /coprime -addn1 mulnAC gcdnMDl gcdn1.
 Qed.
 
-Lemma coprime_dvd_expn m n e : coprime m n -> (m %| n ^ e) = (m %| 1).
-Proof.
-  move => H; elim: e => //= e.
-  by rewrite expnS Gauss_dvdr.
-Qed.
-
 Lemma expSn a n : a.+1 ^ n = \sum_(i < n.+1) 'C(n, i) * a ^ i.
 Proof.
   rewrite -add1n Pascal.
@@ -180,11 +174,11 @@ Proof.
           -/(iota n (m - n.+1).+1) subnSK // -big_split /=.
 Qed.
 
-Goal
-  forall p x n, 2 < p -> prime p -> x %% p = 1 ->
+Lemma poly1_dvdn_expn p x n :
+  2 < p -> prime p -> x %% p = 1 ->
   p ^ n %| iter (p ^ n) (fun a => (a * x).+1) 0.
 Proof.
-  move => p x n Hp Hp0 Hx.
+  move => Hp Hp0 Hx.
   case: x Hx; first by rewrite mod0n.
   move => x; move/eqP.
   rewrite -(modn_small (ltnW Hp)) eqn_mod_dvd // subn1 /=.
@@ -235,8 +229,28 @@ Proof.
       rewrite pfactor_dvdn // -(leq_add2r (logn p (i.+1)`!)) -lognM ?fact_gt0 //
               bin_ffact ffactnS.
       rewrite lognM ?expn_gt0 ?(@prime_gt0 p) ?ffact_gt0 //.
-      - rewrite pfactorK // -addnA leq_add2l logn_fact //.
-        apply leq_trans with i; last apply leq_addr.
-        admit.
+      - rewrite pfactorK // -addnA leq_add2l logn_fact //
+                -ltnS -addSn /index_iota subn1 -pred_Sn.
+        apply leq_trans with i.+1; last apply leq_addr.
+        elim: {n i Hp H H0} i.+1 {1 3 5 6}i.+1 (leqnn i.+1) (ltn0Sn i).
+        - by move => n H H0; move: (leq_trans H0 H).
+        - move => /= n IH i H H0.
+          rewrite big_cons expn1 -(addn1 1) iota_addl big_map.
+          have H1: forall j, i %/ p ^ (1 + j) = i %/ p %/ p ^ j
+            by move => j; rewrite expnD expn1 divnMA.
+          rewrite (eq_bigr _ (fun j _ => H1 j)) {H1} -ltn_subRL.
+          case: (eqVneq (i %/ p) 0).
+          - move => ->.
+            by rewrite (eq_bigr _ (fun j _ => div0n (p ^ j))) subn0
+                       -(addnK 1 n) -/(index_iota 1 (n + 1)) addn1 big_const_nat
+                       iter_addn mul0n add0n.
+          - move => H1; apply leq_trans with (i %/ p).
+            - apply IH.
+              - rewrite -ltnS; apply leq_trans with i => //.
+                by apply ltn_Pdiv => //; apply prime_gt1.
+              - by case: (i %/ p) H1.
+            - rewrite -(leq_add2r (i %/ p)) subnK; last apply leq_div.
+              rewrite addnn -muln2 -leq_divRL //.
+              by apply leq_div2l => //; apply prime_gt1.
       - by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
 Qed.
