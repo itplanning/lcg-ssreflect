@@ -254,3 +254,24 @@ Proof.
               by apply leq_div2l => //; apply prime_gt1.
       - by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
 Qed.
+
+Lemma Fermat p x : prime p -> coprime p x -> x ^ p.-1 == 1 %[mod p].
+Proof.
+  move => H H0.
+  have H1: (0 < p) by apply prime_gt0.
+  rewrite -(eqn_modDmull p x) // muln1 -expnS prednK // {H0}.
+  elim: x.
+  - by rewrite exp0n.
+  - move => x; move/eqP => IH.
+    rewrite expSn -(big_mkord (fun _ => true) (fun i => 'C(p, i) * x ^ i))
+            /index_iota subn0 /= big_cons expn0 muln1 bin0 -(add1n x) eqn_modDl
+            -{1}(@prednK p) // -(addn1 p.-1) iota_add /= big_cat big_cons
+            big_nil /= addn0 add1n prednK // binn mul1n -modnDmr {}IH modnDmr
+            -{3}(add0n x) eqn_modDr mod0n -/(dvdn p _) -subn1
+            -/(index_iota 1 p) big_nat.
+    apply big_ind.
+    - apply dvdn0.
+    - apply dvdn_add.
+    - move => i H2.
+      by apply dvdn_mulr, prime_dvd_bin.
+Qed.

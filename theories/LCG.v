@@ -108,9 +108,6 @@ Proof.
     have H3: coprime cM cA.
       case: (nat_of_ord cA) H H1 => //= cA' _ H1.
       by case/dvdnP: H1 => x ->; rewrite mulnA; apply coprime_ppS.
-    rewrite Gauss_dvdr ?coprime_expr //.
-    move: {n H2} (n - m) => n.
-    admit.
 (*
     rewrite {2}/dvdn -(inj_eq (mulnl_inj _ (leqpp _ _ H))) mul0n
             !(muln_modl (leqpp _ _ H)) -mulnA poly1_eq2 -/(dvdn _ _) Gauss_dvdr.
@@ -120,6 +117,10 @@ Proof.
     - apply coprime_expr.
       by rewrite coprime_mull (coprimePn (ltnW H)) andbT.
 *)
+    rewrite Gauss_dvdr ?coprime_expr //.
+    move: {n H2} (n - m) => n.
+    Check poly1_dvdn_expn.
+    admit.
 Qed.
 
 End LCG'.
