@@ -1,8 +1,8 @@
 Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
-  Ssreflect.ssrnat Ssreflect.seq Ssreflect.div Ssreflect.choice
-  Ssreflect.fintype Ssreflect.path Ssreflect.bigop Ssreflect.prime
-  Ssreflect.finset Ssreflect.binomial.
+  Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
+  MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.finset
+  MathComp.binomial.
 Require Import Coq.Program.Wf LCG.seq_ext LCG.ssrnat_ext.
 
 Lemma leq_cardI (T : finType) (x y : pred T) :

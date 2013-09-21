@@ -1,7 +1,7 @@
 Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
-  Ssreflect.ssrnat Ssreflect.seq Ssreflect.div Ssreflect.choice
-  Ssreflect.fintype Ssreflect.path Ssreflect.bigop.
+  Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
+  MathComp.div MathComp.path MathComp.bigop.
 Set Implicit Arguments.
 
 Lemma iota_cutl n n' m :
