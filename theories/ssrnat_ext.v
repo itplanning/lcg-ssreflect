@@ -1,6 +1,7 @@
 Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
-  Ssreflect.ssrnat Ssreflect.seq Ssreflect.fintype
+  Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype.
+Require Import
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
 Require Import Coq.Program.Wf LCG.seq_ext.
 
@@ -150,10 +151,27 @@ Proof.
     by rewrite /coprime -addn1 mulnAC gcdnMDl gcdn1.
 Qed.
 
+Lemma Pascal' a b n :
+  (a + b) ^ n.+1 = a ^ n.+1 + b ^ n.+1 +
+                   \sum_(1 <= i < n.+1) 'C(n.+1, i) * (a ^ (n.+1 - i) * b ^ i).
+Proof.
+  by rewrite
+    Pascal -(big_mkord xpredT (fun i => 'C(_, i) * (a ^ (_ - i) * b ^ i)))
+    /index_iota subn0 subn1 -(addn1 n.+1) iota_add add0n big_cat /= !big_cons
+    big_nil bin0 binn subnn !subn0 addn0 !expn0 !mul1n muln1 addnC addnCA addnA.
+Qed.
+
 Lemma expSn a n : a.+1 ^ n = \sum_(i < n.+1) 'C(n, i) * a ^ i.
 Proof.
   rewrite -add1n Pascal.
   by apply eq_bigr => i _; rewrite exp1n mul1n.
+Qed.
+
+Lemma expSS a n :
+  a.+1 ^ n.+1 = (a ^ n.+1).+1 + \sum_(1 <= i < n.+1) 'C(n.+1, i) * a ^ i.
+Proof.
+  rewrite -add1n Pascal' exp1n add1n.
+  by f_equal; apply eq_bigr => i _; rewrite exp1n mul1n.
 Qed.
 
 Lemma binomial_sum m n : \sum_(n <= k < m) 'C(k, n) = 'C(m, n.+1).
@@ -255,23 +273,21 @@ Proof.
       - by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
 Qed.
 
-Lemma Fermat p x : prime p -> coprime p x -> x ^ p.-1 == 1 %[mod p].
+Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
 Proof.
   move => H H0.
   have H1: (0 < p) by apply prime_gt0.
-  rewrite -(eqn_modDmull p x) // muln1 -expnS prednK // {H0}.
-  elim: x.
+  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS prednK //.
+  elim: x {H0}.
   - by rewrite exp0n.
-  - move => x; move/eqP => IH.
-    rewrite expSn -(big_mkord (fun _ => true) (fun i => 'C(p, i) * x ^ i))
-            /index_iota subn0 /= big_cons expn0 muln1 bin0 -(add1n x) eqn_modDl
-            -{1}(@prednK p) // -(addn1 p.-1) iota_add /= big_cat big_cons
-            big_nil /= addn0 add1n prednK // binn mul1n -modnDmr {}IH modnDmr
-            -{3}(add0n x) eqn_modDr mod0n -/(dvdn p _) -subn1
-            -/(index_iota 1 p) big_nat.
-    apply big_ind.
-    - apply dvdn0.
-    - apply dvdn_add.
-    - move => i H2.
-      by apply dvdn_mulr, prime_dvd_bin.
+  - move => x IH.
+    rewrite -{2}(prednK H1) expSS prednK //= addnC -addnBA.
+    - rewrite dvdn_addr // big_nat.
+      apply big_ind => //.
+      - apply dvdn_add.
+      - by move => i H2; apply dvdn_mulr, prime_dvd_bin.
+    - case: x {IH} => [| x].
+      - by rewrite exp0n.
+      - rewrite ltnS -{1}(expn1 x.+1).
+        by apply leq_pexp2l.
 Qed.
