@@ -45,8 +45,8 @@ Proof.
   - move => H; move/subnKC: (H) => <-.
     rewrite orbF -{1}(mul1n n).
     case: n H.
-    - by move => _; rewrite divn0.
-    - by move => n; rewrite divnMDl.
+    + by move => _; rewrite divn0.
+    + by move => n; rewrite divnMDl.
 Qed.
 
 Lemma dvdn_lmull d1 d2 m : d1 * d2 %| m -> d1 %| m.
@@ -79,8 +79,8 @@ Proof.
   - by rewrite muln0; case: n => //= n; rewrite exp0n.
   - move => x.
     elim: n => /=.
-    - by rewrite mul0n.
-    - move => n.
+    + by rewrite mul0n.
+    + move => n.
       have ->: (x.+1 ^ n.+1).-1 = x + (x.+1 ^ n).-1 * x.+1.
         rewrite expnS mulnC.
         move: (erefl : (0 < x.+1) || (n == 0)).
@@ -179,12 +179,12 @@ Proof.
   elim: m n.
   - by move => n; rewrite big_nil bin0n.
   - move => m IH [].
-    - by rewrite bin1 (eq_bigr _ (fun n _ => bin0 n))
+    + by rewrite bin1 (eq_bigr _ (fun n _ => bin0 n))
                  big_const_nat subn0 iter_addn_0 mul1n.
-    - move => n; case (leqP m n) => H.
-      - rewrite /index_iota subSS bin_small //.
+    + move => n; case (leqP m n) => H.
+      * rewrite /index_iota subSS bin_small //.
         by move/eqP: H => ->; rewrite big_nil.
-      - by rewrite
+      * by rewrite
           binS -!IH {1}/index_iota subSS -{1}add1n iota_addl big_map
           -/(index_iota n m) (eq_bigr (fun j => 'C(j, n.+1) + 'C(j, n))) //
           -(add0n (\sum_(n.+1 <= _ < m) _)) -{2}(bin_small (leqnn n.+1))
@@ -210,15 +210,15 @@ Proof.
       move: (IH (x %/ p) (ltn_Pdiv (ltnW Hp) Hx0)) => {IH}.
       rewrite divn_gt0; last by rewrite (ltnW (ltnW Hp)).
       rewrite (dvdn_leq Hx0 Hx1) => IH.
-      case: (eqVneq (p %| x %/ p) true).
-      - case/(IH erefl) => k' [m' [H [H0 H1]]].
+      case/boolP: (p %| x %/ p).
+      + case/(IH erefl) => k' [m' [H [H0 H1]]].
         exists k', m'.+1; split => //; split => //.
         move: Hx1; rewrite dvdn_eq H1; move/eqP => <-.
         by rewrite mulnAC -mulnA -expnS.
-      - rewrite negb_eqb addbT => H.
+      + move => H.
         exists (x %/ p), 1; split => //; split.
-        - by rewrite (prime_coprime _ Hp0).
-        - by apply/esym/eqP; rewrite expn1 -dvdn_eq.
+        * by rewrite (prime_coprime _ Hp0).
+        * by apply/esym/eqP; rewrite expn1 -dvdn_eq.
     case => k [m [H [H0 ->]]] {x Hx Hx0}.
     rewrite
       poly1_eq1 (eq_bigr _ (fun (n : ordinal _) _ => expSn (k * p ^ m) n))
@@ -234,20 +234,20 @@ Proof.
     rewrite -expnM mulSn expnD (mulnC (p ^ i)) (mulnA (k ^ i)) mulnCA.
     apply dvdn_mull => {m k H0}.
     case: (leqP n i).
-    - by move => H; apply dvdn_mull, dvdn_exp2l.
-    - move: (nat_of_ord i) => {i} i H.
+    + by move => H; apply dvdn_mull, dvdn_exp2l.
+    + move: (nat_of_ord i) => {i} i H.
       rewrite -(subnK (ltnW H)) {1}expnD dvdn_pmul2r;
         last by rewrite expn_gt0 (ltnW (ltnW Hp)).
       move: (n - i) => {n H} n.
       have H: i < p ^ (n + i).
         apply leq_trans with (p ^ i).
-        - by apply ltn_expl, prime_gt1.
-        - by rewrite leq_exp2l ?leq_addl // prime_gt1.
+        * by apply ltn_expl, prime_gt1.
+        * by rewrite leq_exp2l ?leq_addl // prime_gt1.
       have H0: 0 < 'C(p ^ (n + i), i.+1) by rewrite bin_gt0.
       rewrite pfactor_dvdn // -(leq_add2r (logn p (i.+1)`!)) -lognM ?fact_gt0 //
               bin_ffact ffactnS.
       rewrite lognM ?expn_gt0 ?(@prime_gt0 p) ?ffact_gt0 //.
-      - rewrite pfactorK // -addnA leq_add2l logn_fact //
+      * rewrite pfactorK // -addnA leq_add2l logn_fact //
                 -ltnS -addSn /index_iota subn1 -pred_Sn.
         apply leq_trans with i.+1; last apply leq_addr.
         elim: {n i Hp H H0} i.+1 {1 3 5 6}i.+1 (leqnn i.+1) (ltn0Sn i).
@@ -257,20 +257,20 @@ Proof.
           have H1: forall j, i %/ p ^ (1 + j) = i %/ p %/ p ^ j
             by move => j; rewrite expnD expn1 divnMA.
           rewrite (eq_bigr _ (fun j _ => H1 j)) {H1} -ltn_subRL.
-          case: (eqVneq (i %/ p) 0).
-          - move => ->.
+          case/boolP: (i %/ p == 0).
+          + move/eqP => ->.
             by rewrite (eq_bigr _ (fun j _ => div0n (p ^ j))) subn0
                        -(addnK 1 n) -/(index_iota 1 (n + 1)) addn1 big_const_nat
                        iter_addn mul0n add0n.
-          - move => H1; apply leq_trans with (i %/ p).
-            - apply IH.
+          + move => H1; apply leq_trans with (i %/ p).
+            * apply IH.
               - rewrite -ltnS; apply leq_trans with i => //.
                 by apply ltn_Pdiv => //; apply prime_gt1.
               - by case: (i %/ p) H1.
-            - rewrite -(leq_add2r (i %/ p)) subnK; last apply leq_div.
+            * rewrite -(leq_add2r (i %/ p)) subnK; last apply leq_div.
               rewrite addnn -muln2 -leq_divRL //.
               by apply leq_div2l => //; apply prime_gt1.
-      - by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
+      * by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
 Qed.
 
 Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
@@ -282,12 +282,12 @@ Proof.
   - by rewrite exp0n.
   - move => x IH.
     rewrite -{2}(prednK H1) expSS prednK //= addnC -addnBA.
-    - rewrite dvdn_addr // big_nat.
+    + rewrite dvdn_addr // big_nat.
       apply big_ind => //.
-      - apply dvdn_add.
-      - by move => i H2; apply dvdn_mulr, prime_dvd_bin.
-    - case: x {IH} => [| x].
-      - by rewrite exp0n.
-      - rewrite ltnS -{1}(expn1 x.+1).
+      * apply dvdn_add.
+      * by move => i H2; apply dvdn_mulr, prime_dvd_bin.
+    + case: x {IH} => [| x].
+      * by rewrite exp0n.
+      * rewrite ltnS -{1}(expn1 x.+1).
         by apply leq_pexp2l.
 Qed.

@@ -69,13 +69,13 @@ Proof.
   move: (leq_cardI _ (mem (rseq cM n)) (pred1 x)) => /=.
   rewrite card_ord {}H size_iterseq addKn card1.
   move: (rseq cM n) => {n} xs.
-  case: (eqVneq (x \in xs) true) => //; rewrite /in_mem => H.
+  case/boolP: (x \in xs) => // H.
   have H0: predI (mem xs) (pred1 x) =i pred0.
     move: H.
-    rewrite /eq_mem /mem; do 2 rewrite /in_mem /=; move => H x'.
-    case: (eqVneq x' x).
-    - by move => ->; move: H; rewrite negb_eqb addbT; move/negbTE => ->.
-    - by move/negbTE => ->; apply andbF.
+    rewrite /eq_mem /mem /= /in_mem /= => H x'.
+    case/boolP: (x' == x).
+    - by move/eqP => ->; rewrite andbT; apply/negbTE.
+    - by rewrite andbF.
   by rewrite (eq_card H0) card0.
 Qed.
 
@@ -100,8 +100,8 @@ Proof.
   case/andP => H; case/andP => H0 H1 H2.
   rewrite !eqn_mod_dvd //; last by rewrite leq_mul2r poly1_leq // orbT.
   rewrite -mulnBl Gauss_dvdl // poly1_sub //.
-  case: (eqVneq 1 cA).
-  - move => <-.
+  case/boolP: (1 == cA).
+  - move/eqP => <-.
     by rewrite exp1n mul1n (eq_iter (fun x => eq_S _ _ (muln1 x))) iter_succn_0.
   - move => H3.
     have {H H3} H: 1 < cA by case: (nat_of_ord cA) H H3 => //; case.
@@ -111,15 +111,14 @@ Proof.
 (*
     rewrite {2}/dvdn -(inj_eq (mulnl_inj _ (leqpp _ _ H))) mul0n
             !(muln_modl (leqpp _ _ H)) -mulnA poly1_eq2 -/(dvdn _ _) Gauss_dvdr.
-    - move: {n H2} (n - m) => n.
+    + move: {n H2} (n - m) => n.
       rewrite -poly1_eq2 (dvdn_pmul2r (leqpp _ _ H)) poly1_eq1.
       admit.
-    - apply coprime_expr.
+    + apply coprime_expr.
       by rewrite coprime_mull (coprimePn (ltnW H)) andbT.
 *)
     rewrite Gauss_dvdr ?coprime_expr //.
     move: {n H2} (n - m) => n.
-    Check poly1_dvdn_expn.
     admit.
 Qed.
 
