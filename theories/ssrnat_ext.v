@@ -291,3 +291,57 @@ Proof.
       * rewrite ltnS -{1}(expn1 x.+1).
         by apply leq_pexp2l.
 Qed.
+
+Lemma LemmaP p x :
+  prime p -> 2 < p ^ logn p x -> logn p (x.+1 ^ p).-1 = (logn p x).+1.
+Proof.
+  move => H H0.
+  have H1: 0 < p by apply prime_gt0.
+  have H2: 0 < p.-1 by apply (leqpp _ _ (prime_gt1 H)).
+  have H3: 1 < x
+    by case: x H0 H2 => [| []] //; rewrite ?logn0 ?logn1 expn0.
+  rewrite
+    -{2}(prednK H1) expSS addSn /= /index_iota subn1 /= {2}prednK //
+    -(prednK H2) !expnS /= big_cons bin1 expn1 (mulnC p) -(addn0 2) iota_addl.
+  have/eq_map ->: forall i, 2 + i = i.+2 by [].
+  rewrite big_map.
+  have/(eq_bigr _) ->: forall i,
+      true -> 'C(p, i.+2) * x ^ i.+2 = x * (x * ('C(p, i.+2) * x ^ i))
+    by move => i _; rewrite !expnS 2!(mulnCA x).
+  rewrite -!big_distrr /= addnCA -!mulnDr lognM ?(ltnW H3) //;
+    last by apply ltn_addr.
+  rewrite -addn1; f_equal.
+  move: (lognE p x) (H0) => ->; rewrite H (ltnW H3) /=.
+  case: ifP => //; rewrite dvdn_eq expnS; move/eqP/esym => H4 H5.
+  rewrite {1}H4 mulnAC -mulSn lognM // (logn_prime p H) eqxx addn1; f_equal.
+  rewrite lognE H /=; case: ifP => // H6.
+  apply False_ind; apply/negP: H6.
+  rewrite -addn1 dvdn_addr -?prime_coprime ?coprimen1 //.
+  case/boolP: (p == 2).
+  - move/eqP => ?; subst p => /=.
+    rewrite expn0 big_nil muln1 dvdn2 /=.
+    move: (lognE 2 x) (H0) => ->.
+    rewrite (ltnW H3) /=; case: ifP => // _.
+    by rewrite lognE /= divn_gt0 // H3 /= dvdn2; case: ifP.
+  - move => H6.
+    have H7: (p.-2 = p.-2.-1.+1).
+      rewrite prednK //.
+      move: (p) H1 H2 H6; do 3 case => //.
+    rewrite H7.
+    apply dvdn_mull, dvdn_add.
+    + by rewrite expnS H4; apply dvdn_mulr, dvdn_mull, dvdnn.
+    + rewrite -(subn0 _.+1) -/(index_iota 0 _) big_nat.
+      apply big_rec => // n m H8.
+      move/dvdn_addl => ->; apply dvdn_mulr, prime_dvd_bin => //=.
+      case/andP: H8; rewrite ltnS => _.
+      by do 3 rewrite -ltnS; rewrite H7 /= !prednK // H7.
+Qed.
+
+Goal forall p x n l,
+  prime p -> 1 < x < p ^ n ->
+  (forall l', l' < l -> ~~ (p ^ n %| iter l' (fun a => (a * x).+1) 0)) ->
+  p ^ n %| iter l (fun a => (a * x).+1) 0 ->
+  (l == p ^ n) = if p == 2 then x == 1 %[mod 4] else x == 1 %[mod p].
+Proof.
+  move => p x n l H H0 H1 H2.
+Abort.
