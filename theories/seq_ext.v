@@ -2,7 +2,10 @@ Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
   Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
   MathComp.div MathComp.path MathComp.bigop.
+
 Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
 
 Lemma iota_cutl n n' m :
   [seq x <- index_iota n m | n' <= x] = index_iota (maxn n n') m.
@@ -24,6 +27,9 @@ Proof.
   rewrite /index_iota.
 Abort.
 
+Lemma index_iota_0s n : index_iota 0 n.+1 = 0 :: map succn (index_iota 0 n).
+Proof. by rewrite /index_iota !subn0 /= -(eq_map add1n) -iota_addl. Qed.
+
 Section seq_ext.
 
 Variable (T : Type).
@@ -36,14 +42,11 @@ Fixpoint iterseq n f (x : T) :=
   end.
 
 Lemma size_iterseq n f x : size (iterseq n f x) = n.
-Proof.
-  by elim: n x => //= n H x; rewrite H.
-Qed.
+Proof. by elim: n x => //= n H x; rewrite H. Qed.
 
 Lemma iterseq_eq n f x : iterseq n f x = [seq iter m f x | m <- iota 0 n].
 Proof.
-  rewrite -{1}/(iter 0 f x).
-  by elim: n 0 x => //= n IH m x; rewrite (IH m.+1).
+  by rewrite -{1}/(iter 0 f x); elim: n 0 x => //= n IH m x; rewrite (IH m.+1).
 Qed.
 
 Lemma iterseq_cat n m f x :
@@ -76,13 +79,14 @@ Qed.
 
 Lemma in_loop_iterseq n f (x y : T) :
   y \in iterseq n f x -> x = iter n f x ->
-  exists m, [/\ m < n, y = iter m f x & iterseq n f y = rot m (iterseq n f x)].
+  exists m,
+    [&& m < n, y == iter m f x & iterseq n f y == rot m (iterseq n f x)].
 Proof.
   case/in_iterseq => m [H H0] H1; exists m.
   move: (ltnW H) => H2.
-  by rewrite H -H0 (iterseq_cat n (n - m) f y) ?leq_subr // subKn //
-             (iterseq_cat n m f x (ltnW H)) -{4}(size_iterseq m f x)
-             rot_size_cat -H0 {4}H0 -iter_add subnK // -H1.
+  by rewrite H -H0 (iterseq_cat f y (leq_subr m n)) subKn //
+             (iterseq_cat f x H2) -{4}(size_iterseq m f x) rot_size_cat -H0
+             {4}H0 -iter_add subnK // -H1 !eqxx.
 Qed.
 
 End seq_ext_eqtype.

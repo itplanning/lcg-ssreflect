@@ -5,6 +5,10 @@ Require Import
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
 Require Import Coq.Program.Wf LCG.seq_ext.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 Theorem well_founded_lt : well_founded (fun x y => x < y).
 Proof.
   move => x.
@@ -67,9 +71,8 @@ Proof.
   elim: n => /=.
   - by rewrite big_nil.
   - move => n ->.
-    rewrite /index_iota !subn0 /= big_cons
-      expn0 -(add1n 0) iota_addl big_map big_distrl /= !add1n.
-    by f_equal; apply eq_bigr => i _; rewrite add1n mulnC -expnS.
+    rewrite big_distrl /= index_iota_0s big_cons big_map expn0 add1n.
+    by apply f_equal, eq_bigr => i _; rewrite expnS mulnC.
 Qed.
 
 Lemma poly1_eq2 x n :
@@ -297,7 +300,7 @@ Lemma LemmaP p x :
 Proof.
   move => H H0.
   have H1: 0 < p by apply prime_gt0.
-  have H2: 0 < p.-1 by apply (leqpp _ _ (prime_gt1 H)).
+  have H2: 0 < p.-1 by apply (leqpp (prime_gt1 H)).
   have H3: 1 < x
     by case: x H0 H2 => [| []] //; rewrite ?logn0 ?logn1 expn0.
   rewrite

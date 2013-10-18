@@ -5,6 +5,10 @@ Require Import
   MathComp.binomial.
 Require Import Coq.Program.Wf LCG.seq_ext LCG.ssrnat_ext.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Import Prenex Implicits.
+
 Lemma leq_cardI (T : finType) (x y : pred T) :
   #|x| + #|y| - #|T| <= #|predI x y|.
 Proof.
@@ -66,7 +70,7 @@ Qed.
 Lemma fp_contains_all (n x : 'I_cM) : full_period n -> x \in rseq cM n.
 Proof.
   rewrite /full_period; case/andP; move/card_uniqP => H _.
-  move: (leq_cardI _ (mem (rseq cM n)) (pred1 x)) => /=.
+  move: (leq_cardI (mem (rseq cM n)) (pred1 x)) => /=.
   rewrite card_ord {}H size_iterseq addKn card1.
   move: (rseq cM n) => {n} xs.
   case/boolP: (x \in xs) => // H.
@@ -83,12 +87,13 @@ Lemma fp_equiv1 x : (forall y, full_period y) <-> full_period x.
 Proof.
   split; first by apply.
   move => H y.
-  case/andP: H (fp_contains_all _ y H) => H; move/eqP => H0 H1.
+  case/andP: H (fp_contains_all y H) => H; move/eqP => H0 H1.
   rewrite /full_period.
-  case: (in_loop_iterseq _ _ _ _ H1 (esym H0)) => n [H2 H3 H4].
+  case: (in_loop_iterseq H1 (esym H0)) => n; move/and3P => [H2].
+  move/eqP => ?; subst y; move/eqP => H3.
   apply/andP; split.
-  - by rewrite H4 rot_uniq.
-  - by rewrite H3 -{2}H0 -!iter_add addnC.
+  - by rewrite H3 rot_uniq.
+  - by rewrite -{2}H0 -!iter_add addnC.
 Qed.
 
 Lemma fp'_to_uniq n m :
