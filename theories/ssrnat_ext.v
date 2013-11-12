@@ -393,12 +393,9 @@ Proof.
         have H8: 0 < iter (2 ^ n.-1) (fun a : nat => (a * x).+1) 0
           by rewrite -(@ltn_pmul2r x.-1) // mul0n poly1_eq2.
         rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
-        have {3}->: 1 = logn 2 x.-1.
-          rewrite (divn_eq x 4) H5 !addnS addn0 /=.
-          have ->: (x %/ 4 * 4).+2 = (x %/ 4 * 2).+1 * 2
-            by rewrite mulSn !addSn add0n -mulnA.
-          by rewrite
-            lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
+        have {3}->: 1 = logn 2 x.-1 by rewrite
+          (divn_eq x 4) H5 addnS /= {2}(erefl : 4 = 2 * 2) mulnA -mulSnr
+          lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
         rewrite -lognM // poly1_eq2 -pfactor_dvdn //.
         case: n H2 {H1 H3 H4 H6 H7 H8} => //= [] // [] // n _.
         elim: n.
