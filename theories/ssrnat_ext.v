@@ -53,6 +53,14 @@ Proof.
     + by move => n; rewrite divnMDl.
 Qed.
 
+Lemma leq_expnl n m : (n <= n ^ m) = ((n < 2) || (0 < m)).
+Proof.
+  case: n m => // n [] /=.
+  - by rewrite ltnn orbF expn0.
+  - move => m.
+    by rewrite ltn0Sn orbT expnS -{1}(muln1 (n.+1)) leq_mul // expn_gt0.
+Qed.
+
 Lemma dvdn_lmull d1 d2 m : d1 * d2 %| m -> d1 %| m.
 Proof.
   case/dvdnP => k => ->.
@@ -276,15 +284,14 @@ Proof.
       * by rewrite -ltnS prednK ?expn_gt0 ?prime_gt0.
 Qed.
 
-Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
+Lemma Fermat' p x : prime p -> p %| (x ^ p) - x.
 Proof.
-  move => H H0.
-  have H1: (0 < p) by apply prime_gt0.
-  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS prednK //.
-  elim: x {H0}.
+  move => H.
+  have H0: (0 < p) by apply prime_gt0.
+  elim: x.
   - by rewrite exp0n.
   - move => x IH.
-    rewrite -{2}(prednK H1) expSS prednK //= addnC -addnBA.
+    rewrite -{2}(prednK H0) expSS prednK //= addnC -addnBA.
     + rewrite dvdn_addr // big_nat.
       apply big_ind => //.
       * apply dvdn_add.
@@ -295,22 +302,45 @@ Proof.
         by apply leq_pexp2l.
 Qed.
 
+Lemma Fermat'' p x n : prime p -> p %| x ^ p ^ n - x.
+Proof.
+  move => H.
+  have H0: (0 < p) by apply prime_gt0.
+  elim: n x.
+  - by move => x; rewrite expn0 expn1 subnn.
+  - move => n IH x.
+    rewrite expnS expnM.
+    case: x; first by rewrite !exp0n // expn_gt0 H0.
+    move => x.
+    rewrite -(@subnK (x.+1 ^ p) ((x.+1 ^ p) ^ p ^ n)) -?addnBA ?leq_expnl.
+    + by apply dvdn_add => //; apply Fermat'.
+    + by rewrite (prime_gt0 H) orbT.
+    + by rewrite expn_gt0 (prime_gt0 H) /= orbT.
+Qed.
+
+Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
+Proof.
+  move => H H0.
+  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS prednK //.
+  - by apply Fermat'.
+  - by apply prime_gt0.
+Qed.
+
 Lemma LemmaP p x :
   prime p -> 2 < p ^ logn p x -> logn p (x.+1 ^ p).-1 = (logn p x).+1.
 Proof.
   move => H H0.
   have H1: 0 < p by apply prime_gt0.
   have H2: 0 < p.-1 by apply (leqpp (prime_gt1 H)).
-  have H3: 1 < x
-    by case: x H0 H2 => [| []] //; rewrite ?logn0 ?logn1 expn0.
+  have H3: 1 < x by case: x H0 H2 => [| []] //; rewrite ?logn0 ?logn1 expn0.
   rewrite
     -{2}(prednK H1) expSS addSn /= /index_iota subn1 /= {2}prednK //
     -(prednK H2) !expnS /= big_cons bin1 expn1 (mulnC p) -(addn0 2) iota_addl.
   have/eq_map ->: forall i, 2 + i = i.+2 by [].
   rewrite big_map.
-  have/(eq_bigr _) ->: forall i,
+  have/(eq_bigr _) -> i:
       true -> 'C(p, i.+2) * x ^ i.+2 = x * (x * ('C(p, i.+2) * x ^ i))
-    by move => i _; rewrite !expnS 2!(mulnCA x).
+    by rewrite !expnS 2!(mulnCA x).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM ?(ltnW H3) //;
     last by apply ltn_addr.
   rewrite -addn1; f_equal.
@@ -327,9 +357,7 @@ Proof.
     rewrite (ltnW H3) /=; case: ifP => // _.
     by rewrite lognE /= divn_gt0 // H3 /= dvdn2; case: ifP.
   - move => H6.
-    have H7: (p.-2 = p.-2.-1.+1).
-      rewrite prednK //.
-      move: (p) H1 H2 H6; do 3 case => //.
+    have H7: (p.-2 = p.-2.-1.+1) by move: (p) H1 H2 H6; do 3 case => //.
     rewrite H7.
     apply dvdn_mull, dvdn_add.
     + by rewrite expnS H4; apply dvdn_mulr, dvdn_mull, dvdnn.
@@ -340,11 +368,68 @@ Proof.
       by do 3 rewrite -ltnS; rewrite H7 /= !prednK // H7.
 Qed.
 
-Goal forall p x n l,
+Lemma LemmaR p x n l :
   prime p -> 1 < x < p ^ n ->
   (forall l', l' < l -> ~~ (p ^ n %| iter l' (fun a => (a * x).+1) 0)) ->
   p ^ n %| iter l (fun a => (a * x).+1) 0 ->
-  (l == p ^ n) = if p == 2 then x == 1 %[mod 4] else x == 1 %[mod p].
+  (l == p ^ n) = (x == 1 %[mod if p == 2 then 4 else p]).
 Proof.
-  move => p x n l H H0 H1 H2.
+  move => H; case/andP => H0 H1 H3 H4.
+  have H2: 0 < n by
+    move: H0 H1 {H H3 H4}; case: n => //; rewrite expn0; case: x.
+  apply/esym/idP; case: ifP; move/eqP.
+  - move => ?; subst l.
+    have H5: p = 2 -> x %% 4 <> 3.
+      move => ? {H}; subst p => H5.
+      have {H2} H2: 1 < n.
+        case: n H1 {H2 H3 H4 H5}.
+        + by rewrite expn0; move/(ltn_trans H0).
+        + by case => //; rewrite expn1; case: x H0 => // [] // [].
+      have H6: 2 ^ n %| iter (2 ^ n.-1) (fun a => (a * x).+1) 0.
+        have H6: 0 < x.-1 by apply (@leqpp 2).
+        have H7: 0 < (x ^ 2 ^ n.-1).-1.
+          apply (@leqpp 2), (leq_trans H0).
+          by rewrite -{1}(expn1 x) leq_exp2l // expn_gt0.
+        have H8: 0 < iter (2 ^ n.-1) (fun a : nat => (a * x).+1) 0
+          by rewrite -(@ltn_pmul2r x.-1) // mul0n poly1_eq2.
+        rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
+        have {3}->: 1 = logn 2 x.-1.
+          rewrite (divn_eq x 4) H5 !addnS addn0 /=.
+          have ->: (x %/ 4 * 4).+2 = (x %/ 4 * 2).+1 * 2
+            by rewrite mulSn !addSn add0n -mulnA.
+          by rewrite
+            lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
+        rewrite -lognM // poly1_eq2 -pfactor_dvdn //.
+        case: n H2 {H1 H3 H4 H6 H7 H8} => //= [] // [] // n _.
+        elim: n.
+        + rewrite (divn_eq x 4) H5 sqrnD addnAC (erefl : 3 ^ 2 = 9) addnS /=.
+          do 2 apply dvdn_add => //.
+          * by rewrite expnMn (erefl : 4 ^ 2 = 2 * 8) mulnA dvdn_mull.
+          * by rewrite (@dvdn_pmul2l 2 4) // mulnAC dvdn_mull.
+        + move => e IH.
+          rewrite (expnS 2 e.+1) mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0
+                  ?(ltnW H0) // -(addn1 _.-1) sqrnD muln1 addn1 addSn /= expnS.
+          apply dvdn_add; rewrite dvdn_mul //.
+          by move: IH; rewrite expnS; apply dvdn_lmull.
+      move: {H0 H1 H3 H4 H5} (H3 (2 ^ n.-1)); rewrite {}H6 /=.
+      case: n H2 => //= n _.
+      rewrite expnS -{1}(mul1n (2 ^ n)) ltn_mul2r expn_gt0 //= => H.
+      by move: (H erefl).
+    suff {H5}: x == 1 %[mod p].
+      case: ifP => //; move/eqP => ?; subst p.
+      rewrite !(@modn_small 1) // -(@modn_dvdm 4 _ 2) //.
+      move: {H5} (x %% 4) (@ltn_pmod x 4 erefl) (H5 erefl).
+      do 4 case => //.
+    rewrite eqn_mod_dvd ?(ltnW H0) // subn1.
+    apply/negP; move/negP => H6; move: H4.
+    rewrite -(@Gauss_dvdl (p ^ n) _ x.-1) ?poly1_eq2.
+    + rewrite -{1}(prednK H2) expnS.
+      move/dvdn_lmull/(fun h => dvdn_sub h (Fermat'' x n H)).
+      apply/negP.
+      rewrite -subn1 subnAC subnBA ?addKn ?subn1 //.
+      rewrite -{1}(expn1 x) leq_exp2l //.
+      by apply ltn_trans with x => //; apply ltnW.
+    + by rewrite coprime_pexpl // prime_coprime.
+  - move => H6 H5; apply: H6.
+    admit.
 Abort.
