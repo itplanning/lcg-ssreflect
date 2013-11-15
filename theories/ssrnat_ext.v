@@ -341,11 +341,10 @@ Proof.
       'C(p.+2, i.+2) * x.+2 ^ i.+2 = x.+2 * (x.+2 * ('C(p.+2, i.+2) * x.+2 ^ i))
     by rewrite !expnS 2!(mulnCA x.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
-  rewrite lognE H /= in H0.
-  case: ifP H0 => //.
+  move: H0; rewrite lognE H /=; case: ifP => //.
   rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
-  rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1; f_equal.
-  apply ndvdn_logn.
+  rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1.
+  f_equal; apply ndvdn_logn.
   rewrite (dvdn_addl 1) //.
   case: p H H0 H1.
   - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
