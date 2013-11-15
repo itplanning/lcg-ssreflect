@@ -349,10 +349,10 @@ Proof.
   - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
   - move => p H H0 _.
     apply dvdn_mull, dvdn_add.
-    + by rewrite expnS H0; apply dvdn_mulr, dvdn_mull, dvdnn.
+    + by rewrite expnS {1}H0; apply dvdn_mulr, dvdn_mull.
     + rewrite -/(index_iota 0 p.+1) big_nat.
-      apply big_rec => // n m H1.
-      by move/dvdn_addl => ->; apply dvdn_mulr, prime_dvd_bin.
+      by apply big_rec => // n m H1 H2;
+        apply dvdn_add => //; apply dvdn_mulr, prime_dvd_bin.
 Qed.
 
 Lemma LemmaR p x n l :
