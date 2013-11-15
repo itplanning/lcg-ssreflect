@@ -361,77 +361,65 @@ Lemma LemmaR p x n l :
   p ^ n %| iter l (fun a => (a * x).+1) 0 ->
   (l == p ^ n) = (x == 1 %[mod if p == 2 then 4 else p]).
 Proof.
-  move => H; case/andP => H0 H1 H3 H4.
-  have H2: 0 < n by
-    move: H0 H1 {H H3 H4}; case: n => //; rewrite expn0; case: x.
+  move: p x n => [] // [] // p [] // [] // x [] // n H; case/andP => _ H0 H1 H2.
   apply/esym/idP; case: ifP; move/eqP.
   - move => ?; subst l.
-    have H5: p = 2 -> x %% 4 <> 3.
-      move => ? {H}; subst p => H5.
-      have {H2} H2: 1 < n.
-        case: n H1 {H2 H3 H4 H5}.
-        + by rewrite expn0; move/(ltn_trans H0).
-        + by case => //; rewrite expn1; case: x H0 => // [] // [].
-      have H6: 2 ^ n %| iter (2 ^ n.-1) (fun a => (a * x).+1) 0.
-        have H6: 0 < x.-1 by apply (@leqpp 2).
-        have H7: 0 < (x ^ 2 ^ n.-1).-1.
-          apply (@leqpp 2), (leq_trans H0).
-          by rewrite -{1}(expn1 x) leq_exp2l // expn_gt0.
-        have H8: 0 < iter (2 ^ n.-1) (fun a : nat => (a * x).+1) 0
-          by rewrite -(@ltn_pmul2r x.-1) // mul0n poly1_eq2.
-        rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
-        have {3}->: 1 = logn 2 x.-1 by rewrite
-          (divn_eq x 4) H5 addnS /= {2}(erefl : 4 = 2 * 2) mulnA -mulSnr
-          lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
-        rewrite -lognM // poly1_eq2 -pfactor_dvdn //.
-        case: n H2 {H1 H3 H4 H6 H7 H8} => //= [] // [] // n _; elim: n.
-        + rewrite (divn_eq x 4) H5 sqrnD addnAC (erefl : 3 ^ 2 = 9) addnS /=.
-          do 2 apply dvdn_add => //.
-          * by rewrite expnMn (erefl : 4 ^ 2 = 2 * 8) mulnA dvdn_mull.
-          * by rewrite (@dvdn_pmul2l 2 4) // mulnAC dvdn_mull.
-        + move => e IH.
-          rewrite (expnS 2 e.+1) mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0
-                  ?(ltnW H0) // -(addn1 _.-1) sqrnD muln1 addn1 addSn /= expnS.
-          apply dvdn_add; rewrite dvdn_mul //.
-          by move: IH; rewrite expnS; apply dvdn_lmull.
-      move: {H0 H1 H3 H4 H5} (H3 (2 ^ n.-1)); rewrite {}H6 /=.
-      case: n H2 => //= n _.
-      rewrite expnS -{1}(mul1n (2 ^ n)) ltn_mul2r expn_gt0 //= => H.
-      by move: (H erefl).
-    suff {H5}: x == 1 %[mod p].
-      case: ifP => //; move/eqP => ?; subst p.
-      rewrite !(@modn_small 1) // -(@modn_dvdm 4 _ 2) //.
-      move: {H5} (x %% 4) (@ltn_pmod x 4 erefl) (H5 erefl).
-      do 4 case => //.
-    rewrite eqn_mod_dvd ?(ltnW H0) // subn1.
-    apply/negP; move/negP => H6; move: H4.
-    rewrite -(@Gauss_dvdl (p ^ n) _ x.-1) ?poly1_eq2.
-    + rewrite -{1}(prednK H2) expnS.
-      move/dvdn_lmull/(fun h => dvdn_sub h (Fermat'' x n H)).
+    have {H0 H1} H0: p = 0 -> x %% 4 <> 1.
+      move => ? {H}; subst p => H.
+      case: n H0 H1 H2; first by rewrite expn1 //.
+      move => n _ H0 _.
+      have/H0/negP {H0}: 2 ^ n.+1 < 2 ^ n.+2
+        by rewrite (expnS 2 n.+1) -{1}(mul1n (2 ^ n.+1)) ltn_mul2r expn_gt0.
+      apply.
+      have H0: 0 < (x.+2 ^ 2 ^ n.+1).-1.
+          apply (@leqpp 2), (@leq_trans x.+2) => //.
+          by rewrite -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
+      have H1: 0 < iter (2 ^ n.+1) (fun a : nat => (a * x.+2).+1) 0
+        by rewrite -(@ltn_pmul2r x.+1) // mul0n poly1_eq2.
+      rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
+      have {3}->: 1 = logn 2 x.+1 by rewrite
+        (divn_eq x 4) H -addnS /= {2}(erefl : 4 = 2 * 2) mulnA -mulSnr
+        lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
+      rewrite -lognM // poly1_eq2 -pfactor_dvdn //.
+      elim: n {H0 H1}.
+      + rewrite expn1 (divn_eq x 4) H -!addnS
+                sqrnD addnAC (erefl : 3 ^ 2 = 9) addnS /=.
+        do 2 apply dvdn_add => //.
+        * by rewrite expnMn (erefl : 4 ^ 2 = 2 * 8) mulnA dvdn_mull.
+        * by rewrite (@dvdn_pmul2l 2 4) // mulnAC dvdn_mull.
+      + move => e IH.
+        rewrite (expnS 2 e.+1) mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0 //
+                -(addn1 _.-1) sqrnD muln1 addn1 addSn /= expnS.
+        apply dvdn_add; rewrite dvdn_mul //.
+        by move: IH; rewrite expnS; apply dvdn_lmull.
+    suff {H0}: p.+2 %| x.+1.
+      case: ifP => //; move/eqP.
+      + case => ?; subst.
+        rewrite (divn_eq x 4) -!addnS /dvdn
+                {2}(erefl : 4 = 2 * 2) {1}mulnA !modnMDl.
+        move: (x %% 4) (@ltn_pmod x 4 erefl) (H0 erefl).
+        do 4 case => //.
+      + by move => _; rewrite (eqn_modDl 1 x.+1 0).
+    apply/negP; move/negP => H0; move: H2.
+    rewrite -(@Gauss_dvdl (p.+2 ^ n.+1) _ x.+1) ?poly1_eq2.
+    + rewrite {1}expnS.
+      move/dvdn_lmull/(fun h => dvdn_sub h (Fermat'' x.+2 n.+1 H)).
       apply/negP.
-      rewrite -subn1 subnAC subnBA ?addKn ?subn1 //.
-      rewrite -{1}(expn1 x) leq_exp2l //.
-      by apply ltn_trans with x => //; apply ltnW.
+      by rewrite -subn1 subnAC subnBA ?addKn ?subn1 //
+         -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
     + by rewrite coprime_pexpl // prime_coprime.
-  - move => H6 H5; apply: H6.
-    have H6: forall g, logn p (x ^ p ^ g).-1 = logn p x.-1 + g.
-      elim => // g IH.
-      rewrite expnS mulnC expnM -(@prednK (x ^ p ^ g))
-              ?expn_gt0 ?(ltnW H0) // LemmaP // IH.
-      + by rewrite addnS.
-      + move: H5; rewrite eqn_mod_dvd ?(ltnW H0) // subn1.
-        case: ifP; move/eqP.
-        * move => ? H5; subst p.
-          rewrite 2!lognE (leqpp H0) /= dvdn_divRL ?H5
-                  (@dvdn_lmulr 2 2 _ H5) //= divn_gt0 //.
-          have -> /=: 1 < x.-1
-            by move: x H0 H5 {H1 H3 H4 IH}; do 3 case => //.
-          by rewrite !addSn !expnS (@ltn_pmul2l 2 1) //
-                     (@leq_pmul2l 2 1) // expn_gt0.
-        * move => H5 H6.
-          rewrite lognE H (leqpp H0) H6 /= addSn expnS.
-          apply (@leq_mul 3 1 p).
-          - move: p {H H1 H3 H4 H6 IH} (prime_gt1 H) H5; do 3 case => //.
-          - by rewrite expn_gt0 prime_gt0.
+  - move => H4 H3; apply: H4.
+    have H4 g: logn p.+2 (x.+2 ^ p.+2 ^ g).-1 = logn p.+2 x.+1 + g.
+      elim: g {H0 H1 H2} => // g IH.
+      rewrite expnS mulnC expnM -(@prednK (_ ^ _ ^ _))
+              ?expn_gt0 // LemmaP // {}IH //.
+      move: H3; rewrite eqn_mod_dvd // subn1 /=.
+      move: p x H => [[] // | p] /= x H H0.
+      + by rewrite
+          2!lognE /= dvdn_divRL ?H0 (@dvdn_lmulr 2 2) // divn_gt0 //=
+          !addSn !expnS (@ltn_pmul2l 2 1) // (@leq_pmul2l 2 1) // expn_gt0.
+      + rewrite lognE H /= H0 addSn expnS.
+        apply (@leq_mul 3 1) => //.
+        by rewrite expn_gt0.
     admit.
 Abort.
