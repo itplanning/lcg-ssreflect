@@ -53,6 +53,11 @@ Proof.
     + by move => n; rewrite divnMDl.
 Qed.
 
+Lemma ndvdn_logn p m : ~~ (p %| m) -> logn p m = 0.
+Proof.
+  by rewrite lognE; case: ifP => //; case/and3P => _ _ ->.
+Qed.
+
 Lemma leq_expnl n m : (n <= n ^ m) = ((n < 2) || (0 < m)).
 Proof.
   case: n m => // n [] /=.
@@ -339,10 +344,9 @@ Proof.
   rewrite lognE H /= in H0.
   case: ifP H0 => //.
   rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
-  rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1 lognE H /=.
-  case: ifP => // H2.
-  apply False_ind; apply/negP: H2.
-  rewrite -[X in _ %| X]addn1 dvdn_addr -?prime_coprime ?coprimen1 //.
+  rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1; f_equal.
+  apply ndvdn_logn.
+  rewrite (dvdn_addl 1) //.
   case: p H H0 H1.
   - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
   - move => p H H0 _.
