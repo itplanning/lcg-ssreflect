@@ -359,29 +359,29 @@ Lemma LemmaR p x n l :
   prime p -> 1 < x < p ^ n ->
   (forall l', l' < l -> ~~ (p ^ n %| iter l' (fun a => (a * x).+1) 0)) ->
   p ^ n %| iter l (fun a => (a * x).+1) 0 ->
-  (l == p ^ n) = (x == 1 %[mod if p == 2 then 4 else p]).
+  (l == p ^ n) = ((if p == 2 then 4 else p) %| x.-1).
 Proof.
   move: p x n => [] // [] // p [] // [] // x [] // n H; case/andP => _ H0 H1 H2.
+  have H3 m: 0 < (x.+2 ^ p.+2 ^ m).-1.
+    apply (@leqpp 2), (@leq_trans x.+2) => //.
+    by rewrite -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
+  have H4 m: 0 < iter (p.+2 ^ m) (fun a : nat => (a * x.+2).+1) 0
+    by rewrite -(@ltn_pmul2r x.+1) // mul0n poly1_eq2.
   apply/esym/idP; case: ifP; move/eqP.
   - move => ?; subst l.
-    have {H0 H1} H0: p = 0 -> x %% 4 <> 1.
+    have {H0 H1 H3 H4} H0: p = 0 -> x %% 4 <> 1.
       move => ? {H}; subst p => H.
-      case: n H0 H1 H2; first by rewrite expn1 //.
-      move => n _ H0 _.
+      case: n H0 H1 H2 H3 H4; first by rewrite expn1 //.
+      move => n _ H0 _ H1 H2.
       have/H0/negP {H0}: 2 ^ n.+1 < 2 ^ n.+2
         by rewrite (expnS 2 n.+1) -{1}(mul1n (2 ^ n.+1)) ltn_mul2r expn_gt0.
       apply.
-      have H0: 0 < (x.+2 ^ 2 ^ n.+1).-1.
-          apply (@leqpp 2), (@leq_trans x.+2) => //.
-          by rewrite -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
-      have H1: 0 < iter (2 ^ n.+1) (fun a : nat => (a * x.+2).+1) 0
-        by rewrite -(@ltn_pmul2r x.+1) // mul0n poly1_eq2.
       rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
       have {3}->: 1 = logn 2 x.+1 by rewrite
         (divn_eq x 4) H -addnS /= {2}(erefl : 4 = 2 * 2) mulnA -mulSnr
         lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
       rewrite -lognM // poly1_eq2 -pfactor_dvdn //.
-      elim: n {H0 H1}.
+      elim: n {H1 H2}.
       + rewrite expn1 (divn_eq x 4) H -!addnS
                 sqrnD addnAC (erefl : 3 ^ 2 = 9) addnS /=.
         do 2 apply dvdn_add => //.
@@ -394,12 +394,11 @@ Proof.
         by move: IH; rewrite expnS; apply dvdn_lmull.
     suff {H0}: p.+2 %| x.+1.
       case: ifP => //; move/eqP.
-      + case => ?; subst.
-        rewrite (divn_eq x 4) -!addnS /dvdn
-                {2}(erefl : 4 = 2 * 2) {1}mulnA !modnMDl.
-        move: (x %% 4) (@ltn_pmod x 4 erefl) (H0 erefl).
-        do 4 case => //.
-      + by move => _; rewrite (eqn_modDl 1 x.+1 0).
+      case => ?; subst.
+      rewrite (divn_eq x 4) -!addnS /dvdn
+              {2}(erefl : 4 = 2 * 2) {1}mulnA !addnS /= -!addnS !modnMDl.
+      move: (x %% 4) (@ltn_pmod x 4 erefl) (H0 erefl).
+      do 4 case => //.
     apply/negP; move/negP => H0; move: H2.
     rewrite -(@Gauss_dvdl (p.+2 ^ n.+1) _ x.+1) ?poly1_eq2.
     + rewrite {1}expnS.
@@ -408,18 +407,19 @@ Proof.
       by rewrite -subn1 subnAC subnBA ?addKn ?subn1 //
          -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
     + by rewrite coprime_pexpl // prime_coprime.
-  - move => H4 H3; apply: H4.
-    have H4 g: logn p.+2 (x.+2 ^ p.+2 ^ g).-1 = logn p.+2 x.+1 + g.
-      elim: g {H0 H1 H2} => // g IH.
+  - move => /= H6 H5; apply: H6.
+    have {H3 H4} H3 m:
+        logn p.+2 (iter (p.+2 ^ m) (fun a : nat => (a * x.+2).+1) 0) = m.
+      apply (@addIn (logn p.+2 x.+1)).
+      rewrite -lognM // poly1_eq2.
+      elim: m {H0 H1 H2 H3 H4} => // g IH.
       rewrite expnS mulnC expnM -(@prednK (_ ^ _ ^ _))
               ?expn_gt0 // LemmaP // {}IH //.
-      move: H3; rewrite eqn_mod_dvd // subn1 /=.
-      move: p x H => [[] // | p] /= x H H0.
+      move: p x H H5 => [[] // | p] /= x H H0.
       + by rewrite
           2!lognE /= dvdn_divRL ?H0 (@dvdn_lmulr 2 2) // divn_gt0 //=
-          !addSn !expnS (@ltn_pmul2l 2 1) // (@leq_pmul2l 2 1) // expn_gt0.
-      + rewrite lognE H /= H0 addSn expnS.
-        apply (@leq_mul 3 1) => //.
-        by rewrite expn_gt0.
+          !addnS !expnS (@ltn_pmul2l 2 1) // (@leq_pmul2l 2 1) // expn_gt0.
+      + rewrite lognE H /= H0 addnS expnS.
+        by apply (@leq_mul 3 1) => //; rewrite expn_gt0.
     admit.
 Abort.
