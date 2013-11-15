@@ -338,23 +338,22 @@ Proof.
       'C(p.+2, i.+2) * x.+2 ^ i.+2 = x.+2 * (x.+2 * ('C(p.+2, i.+2) * x.+2 ^ i))
     by rewrite !expnS 2!(mulnCA x.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
-  move: (lognE p.+2 x.+2) (H0) => ->; rewrite H /=.
+  move: (lognE p.+2 x.+2) H0 => ->; rewrite H /=.
   case: ifP => //.
-  rewrite dvdn_eq expnS; move/eqP/esym => H1 H2.
-  rewrite {1}H1 mulnAC -mulSn lognM // (logn_prime p.+2 H) eqxx addn1; f_equal.
+  rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
+  rewrite {1}H0 mulnAC -mulSn lognM // (logn_prime p.+2 H) eqxx addn1; f_equal.
   rewrite lognE H /=; case: ifP => // H6.
   apply False_ind; apply/negP: H6.
   rewrite -[X in _ %| X]addn1 dvdn_addr -?prime_coprime ?coprimen1 //.
-  case: p H H0 H1 H2.
-  - move => _ H _ _.
-    rewrite expn0 big_nil muln1 dvdn2 /=.
-    move: (lognE 2 x.+2) (H) => -> /=; case: ifP => // _.
-    by rewrite lognE /= divn_gt0 // dvdn2; case: ifP.
-  - move => p H H0 H1 H2.
+  case: p H H0 H1.
+  - move => _ _.
+    by rewrite expn0 big_nil muln1 dvdn2 /= lognE /= divn_gt0 // dvdn2;
+      case: ifP.
+  - move => p H H0 _.
     apply dvdn_mull, dvdn_add.
-    + by rewrite expnS H1; apply dvdn_mulr, dvdn_mull, dvdnn.
+    + by rewrite expnS H0; apply dvdn_mulr, dvdn_mull, dvdnn.
     + rewrite -/(index_iota 0 p.+1) big_nat.
-      apply big_rec => // n m H3.
+      apply big_rec => // n m H1.
       by move/dvdn_addl => ->; apply dvdn_mulr, prime_dvd_bin.
 Qed.
 
