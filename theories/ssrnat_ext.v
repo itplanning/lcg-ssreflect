@@ -329,11 +329,9 @@ Qed.
 Lemma LemmaP p x :
   prime p -> 2 < p ^ logn p x -> logn p (x.+1 ^ p).-1 = (logn p x).+1.
 Proof.
-  move: p => [] // [] // p H H0.
-  have: 1 < x by case: x H0 => [| []] //; rewrite ?logn0 ?logn1 expn0.
-  move: x H0 => [] // [] // x H0 _.
+  move: p x => [] // [] // p [| []]; rewrite ?logn0 ?logn1 ?expn0 // => x H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
-          big_cons bin1 expn1 (mulnC p.+2) -(addn0 2) iota_addl.
+          big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0).
   have/eq_map ->: forall i, 2 + i = i.+2 by [].
   rewrite big_map.
   have/(eq_bigr _) -> i: true ->
@@ -355,7 +353,7 @@ Proof.
   - move => p H H0 H1 H2.
     apply dvdn_mull, dvdn_add.
     + by rewrite expnS H1; apply dvdn_mulr, dvdn_mull, dvdnn.
-    + rewrite -(subn0 p.+1) -/(index_iota 0 _) big_nat.
+    + rewrite -/(index_iota 0 p.+1) big_nat.
       apply big_rec => // n m H3.
       by move/dvdn_addl => ->; apply dvdn_mulr, prime_dvd_bin.
 Qed.
