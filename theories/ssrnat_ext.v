@@ -346,10 +346,9 @@ Proof.
   rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1.
   f_equal; apply ndvdn_logn.
   rewrite (dvdn_addl 1) //.
-  case: p H H0 H1.
-  - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
-  - move => p H H0 _.
-    apply dvdn_mull, dvdn_add.
+  case: p H H0 H1 => [_ _ | p H H0 _].
+  - by rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
+  - apply dvdn_mull, dvdn_add.
     + by rewrite expnS {1}H0; apply dvdn_mulr, dvdn_mull.
     + rewrite -/(index_iota 0 p.+1) big_nat.
       by apply big_rec => // n m H1 H2;
