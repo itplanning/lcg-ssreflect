@@ -346,9 +346,7 @@ Proof.
   apply False_ind; apply/negP: H6.
   rewrite -[X in _ %| X]addn1 dvdn_addr -?prime_coprime ?coprimen1 //.
   case: p H H0 H1.
-  - move => _ _.
-    by rewrite expn0 big_nil muln1 dvdn2 /= lognE /= divn_gt0 // dvdn2;
-      case: ifP.
+  - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
   - move => p H H0 _.
     apply dvdn_mull, dvdn_add.
     + by rewrite expnS H0; apply dvdn_mulr, dvdn_mull, dvdnn.
