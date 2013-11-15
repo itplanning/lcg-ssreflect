@@ -331,19 +331,17 @@ Lemma LemmaP p x :
 Proof.
   move: p x => [] // [] // p [| []]; rewrite ?logn0 ?logn1 ?expn0 // => x H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
-          big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0).
-  have/eq_map ->: forall i, 2 + i = i.+2 by [].
-  rewrite big_map.
+          big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0) big_map.
   have/(eq_bigr _) -> i: true ->
       'C(p.+2, i.+2) * x.+2 ^ i.+2 = x.+2 * (x.+2 * ('C(p.+2, i.+2) * x.+2 ^ i))
     by rewrite !expnS 2!(mulnCA x.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
-  move: (lognE p.+2 x.+2) H0 => ->; rewrite H /=.
-  case: ifP => //.
+  rewrite lognE H /= in H0.
+  case: ifP H0 => //.
   rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
-  rewrite {1}H0 mulnAC -mulSn lognM // (logn_prime p.+2 H) eqxx addn1; f_equal.
-  rewrite lognE H /=; case: ifP => // H6.
-  apply False_ind; apply/negP: H6.
+  rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1 lognE H /=.
+  case: ifP => // H2.
+  apply False_ind; apply/negP: H2.
   rewrite -[X in _ %| X]addn1 dvdn_addr -?prime_coprime ?coprimen1 //.
   case: p H H0 H1.
   - by move => _ _; rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
