@@ -356,25 +356,27 @@ Proof.
 Qed.
 
 Lemma LemmaR p x n l :
+  let zero i := p ^ n %| iter i (fun a => (a * x).+1) 0 in
   prime p -> 1 < x < p ^ n ->
-  (forall l', l' < l -> ~~ (p ^ n %| iter l' (fun a => (a * x).+1) 0)) ->
-  p ^ n %| iter l (fun a => (a * x).+1) 0 ->
+  0 < l -> (forall l', 0 < l' < l -> ~~ zero l') -> zero l ->
   (l == p ^ n) = ((if p == 2 then 4 else p) %| x.-1).
 Proof.
-  move: p x n => [] // [] // p [] // [] // x [] // n H; case/andP => _ H0 H1 H2.
+  move: p x n l => [] // [] // p [] // [] // x [] // n [] // l zero H;
+    case/andP => _ H0 _ H1 H2.
+  subst zero.
   have H3 m: 0 < (x.+2 ^ p.+2 ^ m).-1.
     apply (@leqpp 2), (@leq_trans x.+2) => //.
     by rewrite -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
   have H4 m: 0 < iter (p.+2 ^ m) (fun a : nat => (a * x.+2).+1) 0
     by rewrite -(@ltn_pmul2r x.+1) // mul0n poly1_eq2.
   apply/esym/idP; case: ifP; move/eqP.
-  - move => ?; subst l.
+  - move => H5; move: H5 H1 H2 => -> {l} H1 H2.
     have {H0 H1 H3 H4} H0: p = 0 -> x %% 4 <> 1.
       move => ? {H}; subst p => H.
       case: n H0 H1 H2 H3 H4; first by rewrite expn1 //.
       move => n _ H0 _ H1 H2.
-      have/H0/negP {H0}: 2 ^ n.+1 < 2 ^ n.+2
-        by rewrite (expnS 2 n.+1) -{1}(mul1n (2 ^ n.+1)) ltn_mul2r expn_gt0.
+      have/H0/negP {H0}: 0 < 2 ^ n.+1 < 2 ^ n.+2 by rewrite
+        expn_gt0 //= (expnS 2 n.+1) -{1}(mul1n (2 ^ n.+1)) ltn_mul2r expn_gt0.
       apply.
       rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
       have {3}->: 1 = logn 2 x.+1 by rewrite
@@ -408,7 +410,7 @@ Proof.
          -{1}(expn1 x.+2) leq_exp2l // expn_gt0.
     + by rewrite coprime_pexpl // prime_coprime.
   - move => /= H6 H5; apply: H6.
-    have {H3 H4} H3 m:
+    have {H3 H4 H5} H3 m:
         logn p.+2 (iter (p.+2 ^ m) (fun a : nat => (a * x.+2).+1) 0) = m.
       apply (@addIn (logn p.+2 x.+1)).
       rewrite -lognM // poly1_eq2.
