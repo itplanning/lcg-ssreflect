@@ -445,7 +445,10 @@ Proof.
           !addnS !expnS (@ltn_pmul2l 2 1) // (@leq_pmul2l 2 1) // expn_gt0.
       + rewrite lognE H /= H1 addnS expnS.
         by apply (@leq_mul 3 1) => //; rewrite expn_gt0.
+    subst zero; move: H H0 H1 H2 H3 H4 H5 H6 => H H0 H1 H2 H3 H4 H5 H6.
     move: (H3 (p.+2 ^ n.+1)).
-    rewrite /zero pfactor_dvdn // (H6 n.+1) leqnn => H7; move: {H7} (H7 erefl).
-    admit.
-Abort.
+    rewrite pfactor_dvdn // (H6 n.+1) leqnn => H7; move: {H7} (H7 erefl).
+    case/(dvdn_pfactor _ _ H) => y H7 H8.
+    rewrite pfactor_dvdn // H8 (H6 y) in H2.
+    by rewrite H8; f_equal; apply/eqP; rewrite eqn_leq H7 H2.
+Qed.
