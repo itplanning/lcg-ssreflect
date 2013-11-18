@@ -21,7 +21,8 @@ Module LCG.
 Section LCG'.
 
 (* cM is LCG's modulus constant, 0 < cM *)
-Variable (cM : nat) (cM_cond : 0 < cM).
+Variable (cM' : nat).
+Definition cM := cM'.+1.
 
 (*
 cA is LCG's multiplier constant,
@@ -34,8 +35,8 @@ Variable (cA cC : 'I_cM).
 nextr x == (cA * x + cC) %% cM
            next random number of x
 *)
-Definition nextr (x : ordinal cM) : ordinal cM :=
-  @Ordinal cM ((cA * x + cC) %% cM) (ltn_pmod (cA * x + cC) cM_cond).
+Definition nextr (x : 'I_cM) : 'I_cM :=
+  @Ordinal cM ((cA * x + cC) %% cM) (ltn_pmod (cA * x + cC) (ltn0Sn cM')).
 
 (*
 rseq n x == [:: x; nextr x; nextr (nextr x); ...; iter n nextr x]
@@ -53,16 +54,18 @@ full_period': equivalent proposition of (forall x, full_period x)
 see: http://en.wikipedia.org/wiki/Linear_congruential_generator#Period_length
 *)
 Definition full_period' :=
-  [&& 0 < cA, coprime cM cC &
-  ((4 %| cM).+1 * \prod_(p <- primes cM) p) %| cA.-1].
+  [&& coprime cM cC,
+      all (fun p => cA %% p == 1) (primes cM) &
+      if 4 %| cM then cA %% 4 == 1 else true].
 
 Lemma general_term_0 n :
-  iter n nextr (@Ordinal cM 0 cM_cond) =
-  @Ordinal cM (iter n (fun a => (a * cA).+1) 0 * cC %% cM) (ltn_pmod _ cM_cond).
+  iter n nextr (inord 0) =
+  @Ordinal cM (iter n (fun a => (a * cA).+1) 0 * cC %% cM)
+           (ltn_pmod _ (ltn0Sn cM')).
 Proof.
   apply/eqP; rewrite /eq_op /=.
   elim: n => /=.
-  - by rewrite mul0n mod0n.
+  - by rewrite inordK.
   - move => n; move/eqP => /= ->.
     by rewrite mulSn (addnC cC) eqn_modDr modnMmr mulnC mulnAC.
 Qed.
@@ -72,7 +75,7 @@ Proof.
   rewrite /full_period; case/andP; move/card_uniqP => H _.
   move: (leq_cardI (mem (rseq cM n)) (pred1 x)) => /=.
   rewrite card_ord {}H size_iterseq addKn card1.
-  move: (rseq cM n) => {n} xs.
+  move: (n :: rseq cM' (nextr n)) => {n} xs.
   case/boolP: (x \in xs) => // H.
   have H0: predI (mem xs) (pred1 x) =i pred0.
     move: H.
@@ -96,53 +99,21 @@ Proof.
   - by rewrite -{2}H0 -!iter_add addnC.
 Qed.
 
-Lemma fp'_to_uniq n m :
-  full_period' -> m <= n ->
-  (n == m %[mod cM]) =
-  (iter n (fun a : nat => (a * cA).+1) 0 * cC ==
-   iter m (fun a : nat => (a * cA).+1) 0 * cC %[mod cM]).
-Proof.
-  case/andP => H; case/andP => H0 H1 H2.
-  rewrite !eqn_mod_dvd //; last by rewrite leq_mul2r poly1_leq // orbT.
-  rewrite -mulnBl Gauss_dvdl // poly1_sub //.
-  case/boolP: (1 == cA).
-  - move/eqP => <-.
-    by rewrite exp1n mul1n (eq_iter (fun x => eq_S _ _ (muln1 x))) iter_succn_0.
-  - move => H3.
-    have {H H3} H: 1 < cA by case: (nat_of_ord cA) H H3 => //; case.
-    have H3: coprime cM cA.
-      case: (nat_of_ord cA) H H1 => //= cA' _ H1.
-      by case/dvdnP: H1 => x ->; rewrite mulnA; apply coprime_ppS.
-(*
-    rewrite {2}/dvdn -(inj_eq (mulnl_inj _ (leqpp _ _ H))) mul0n
-            !(muln_modl (leqpp _ _ H)) -mulnA poly1_eq2 -/(dvdn _ _) Gauss_dvdr.
-    + move: {n H2} (n - m) => n.
-      rewrite -poly1_eq2 (dvdn_pmul2r (leqpp _ _ H)) poly1_eq1.
-      admit.
-    + apply coprime_expr.
-      by rewrite coprime_mull (coprimePn (ltnW H)) andbT.
-*)
-    rewrite Gauss_dvdr ?coprime_expr //.
-    move: {n H2} (n - m) => n.
-    admit.
-Qed.
-
 End LCG'.
 
-Notation rseq cM cMc cA cC n x := (iterseq n (@nextr cM cMc cA cC) x).
+Notation rseq cM' cA cC n x := (iterseq n (@nextr cM' cA cC) x).
 
 End LCG.
 
 Definition lcg_rseq m a b :=
   match m with
     | m'.+1 =>
-      let H : 0 < m'.+1 := erefl in
       map (@nat_of_ord m'.+1)
-          (LCG.rseq m'.+1 H
-                    (@Ordinal m'.+1 (a %% m'.+1) (ltn_pmod a H))
-                    (@Ordinal m'.+1 (b %% m'.+1) (ltn_pmod b H))
+          (LCG.rseq m'
+                    (@Ordinal m'.+1 (a %% m'.+1) (ltn_pmod a (ltn0Sn m')))
+                    (@Ordinal m'.+1 (b %% m'.+1) (ltn_pmod b (ltn0Sn m')))
                     m
-                    (@Ordinal m'.+1 0 H))
+                    (@Ordinal m'.+1 0 (ltn0Sn m')))
     | _ => [::]
   end.
 
