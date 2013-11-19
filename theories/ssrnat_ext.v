@@ -3,7 +3,7 @@ Require Import
   Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype.
 Require Import
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
-Require Import Coq.Program.Wf LCG.seq_ext.
+Require Import LCG.seq_ext.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -12,34 +12,6 @@ Import Prenex Implicits.
 Lemma leqpp m n : m <= n -> m.-1 <= n.-1.
 Proof. by case: m => //=; case: n. Qed.
 
-Lemma mulnr_inj n : 0 < n -> injective (muln n).
-Proof.
-  case: n => //= n _ x y.
-  by move/(f_equal (divn^~ n.+1)); rewrite !mulKn.
-Qed.
-
-Lemma mulnl_inj n : 0 < n -> injective (muln^~ n).
-Proof.
-  case: n => //= n _ x y.
-  by move/(f_equal (divn^~ n.+1)); rewrite !mulnK.
-Qed.
-
-Lemma expn_sub x m n : m <= n -> x ^ n - x ^ m = (x ^ m) * (x ^ (n - m)).-1.
-Proof.
-  by move/subnK => {1}<-; rewrite expnD -{2}(mul1n (x ^ m)) -mulnBl subn1 mulnC.
-Qed.
-
-Lemma divn_eq0 m n : (m %/ n == 0) = (n == 0) || (m < n).
-Proof.
-  case: (ltnP m n).
-  - by move => H; rewrite orbT divn_small.
-  - move => H; move/subnKC: (H) => <-.
-    rewrite orbF -{1}(mul1n n).
-    case: n H.
-    + by move => _; rewrite divn0.
-    + by move => n; rewrite divnMDl.
-Qed.
-
 Lemma ndvdn_logn p m : ~~ (p %| m) -> logn p m = 0.
 Proof.
   by rewrite lognE; case: ifP => //; case/and3P => _ _ ->.
@@ -47,15 +19,14 @@ Qed.
 
 Lemma leq_expnl n m : (n <= n ^ m) = ((n < 2) || (0 < m)).
 Proof.
-  case: n m => // n [] /=.
+  case: n m => // n [| m] /=.
   - by rewrite ltnn orbF expn0.
-  - move => m.
-    by rewrite ltn0Sn orbT expnS -{1}(muln1 (n.+1)) leq_mul // expn_gt0.
+  - by rewrite ltn0Sn orbT expnS -{1}(muln1 (n.+1)) leq_mul // expn_gt0.
 Qed.
 
 Lemma dvdn_lmull d1 d2 m : d1 * d2 %| m -> d1 %| m.
 Proof.
-  case/dvdnP => k => ->.
+  case/dvdnP => k ->.
   by rewrite mulnCA dvdn_mulr.
 Qed.
 
@@ -130,41 +101,6 @@ Proof.
     by move/eqP: IH => ->.
 Qed.
 
-Lemma eqn_modDmull m n x y :
-  coprime m n -> (n * x == n * y %[mod m]) = (x == y %[mod m]).
-Proof.
-  move => H; move: x y.
-  have H0: forall x y,
-             y <= x -> (n * x == n * y %[mod m]) = (x == y %[mod m]) => x y.
-    move => H0.
-    rewrite !eqn_mod_dvd //; last rewrite leq_mul2l H0 orbT //.
-    by rewrite -mulnBr Gauss_dvdr.
-  case/orP: (leq_total x y);
-    first rewrite [X in X = _]eq_sym [X in _ = X]eq_sym; apply H0.
-Qed.
-
-Lemma eqn_modDmulr m n x y :
-  coprime m n -> (x * n == y * n %[mod m]) = (x == y %[mod m]).
-Proof.
-  by rewrite -!(mulnC n); apply eqn_modDmull.
-Qed.
-
-Lemma coprime_ppS m n : 0 < m -> coprime m (n * \prod_(p <- primes m) p).+1.
-Proof.
-  rewrite /primes => H.
-  case: (prime_decomp_correct H).
-  rewrite /pfactor => H0.
-  move: (prime_decomp m) H0 H => xs -> H _ _;
-    elim: xs n H; last case => /=.
-  - by move => n _; rewrite big_nil coprime1n.
-  - move => x1 x2 xs IH n.
-    rewrite !big_cons /= mulnA muln_gt0 expn_gt0.
-    case/andP => H H0.
-    rewrite coprime_mull (IH (n * x1) H0) andbT {IH H0}.
-    apply coprime_expl.
-    by rewrite /coprime -addn1 mulnAC gcdnMDl gcdn1.
-Qed.
-
 Lemma Pascal' a b n :
   (a + b) ^ n.+1 = a ^ n.+1 + b ^ n.+1 +
                    \sum_(1 <= i < n.+1) 'C(n.+1, i) * (a ^ (n.+1 - i) * b ^ i).
@@ -173,12 +109,6 @@ Proof.
     Pascal -(big_mkord xpredT (fun i => 'C(_, i) * (a ^ (_ - i) * b ^ i)))
     /index_iota subn0 subn1 -(addn1 n.+1) iota_add add0n big_cat /= !big_cons
     big_nil bin0 binn subnn !subn0 addn0 !expn0 !mul1n muln1 addnC addnCA addnA.
-Qed.
-
-Lemma expSn a n : a.+1 ^ n = \sum_(i < n.+1) 'C(n, i) * a ^ i.
-Proof.
-  rewrite -add1n Pascal.
-  by apply eq_bigr => i _; rewrite exp1n mul1n.
 Qed.
 
 Lemma expSS a n :
@@ -190,44 +120,35 @@ Qed.
 
 Lemma Fermat' p x : prime p -> p %| (x ^ p) - x.
 Proof.
-  move => H.
-  have H0: (0 < p) by apply prime_gt0.
-  elim: x.
+  move: p => [] // [] // p H; elim: x.
   - by rewrite exp0n.
   - move => x IH.
-    rewrite -{2}(prednK H0) expSS prednK //= addnC -addnBA.
+    rewrite expSS /= addSn subSS addnC -addnBA.
     + rewrite dvdn_addr // big_nat.
       apply big_ind => //.
       * apply dvdn_add.
-      * by move => i H2; apply dvdn_mulr, prime_dvd_bin.
-    + case: x {IH} => [| x].
-      * by rewrite exp0n.
-      * rewrite ltnS -{1}(expn1 x.+1).
-        by apply leq_pexp2l.
+      * by move => i H0; apply dvdn_mulr, prime_dvd_bin.
+    + by rewrite leq_expnl /= orbT.
 Qed.
 
 Lemma Fermat'' p x n : prime p -> p %| x ^ p ^ n - x.
 Proof.
-  move => H.
-  have H0: (0 < p) by apply prime_gt0.
-  elim: n x.
+  move: p => [] // [] // p H; elim: n x.
   - by move => x; rewrite expn0 expn1 subnn.
   - move => n IH x.
     rewrite expnS expnM.
-    case: x; first by rewrite !exp0n // expn_gt0 H0.
-    move => x.
-    rewrite -(@subnK (x.+1 ^ p) ((x.+1 ^ p) ^ p ^ n)) -?addnBA ?leq_expnl.
-    + by apply dvdn_add => //; apply Fermat'.
-    + by rewrite (prime_gt0 H) orbT.
-    + by rewrite expn_gt0 (prime_gt0 H) /= orbT.
+    rewrite -(@subnK (x ^ p.+2) ((x ^ p.+2) ^ p.+2 ^ n)).
+    + rewrite -addnBA.
+      * by apply dvdn_add => //; apply Fermat'.
+      * by rewrite leq_expnl /= orbT.
+    + by rewrite leq_expnl expn_gt0 /= orbT.
 Qed.
 
 Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
 Proof.
-  move => H H0.
-  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS prednK //.
-  - by apply Fermat'.
-  - by apply prime_gt0.
+  case: p => //= p H H0.
+  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS.
+  by apply Fermat'.
 Qed.
 
 Lemma LemmaP p x :
@@ -249,7 +170,7 @@ Proof.
   - by rewrite big_nil expn0 muln1 lognE divn_gt0 //=; case: ifP.
   - apply dvdn_mull, dvdn_add.
     + by rewrite expnS {1}H0; apply dvdn_mulr, dvdn_mull.
-    + rewrite -/(index_iota 0 p.+1) big_nat.
+    + rewrite (big_nat _ _ 0 p.+1).
       by apply big_rec => // n m H1 H2;
         apply dvdn_add => //; apply dvdn_mulr, prime_dvd_bin.
 Qed.
@@ -282,9 +203,8 @@ Proof.
     have {H0 H1 H4 H5} H0: p = 0 -> x %% 4 <> 1.
       move => ? {H H2}; move: H1; subst zero p => H H1.
       case: n H H0; first by rewrite expn1 //.
-      move => n H H0.
-      have/H/negP {H0}: 0 < 2 ^ n.+1 < 2 ^ n.+2 by rewrite
-        expn_gt0 //= (expnS 2 n.+1) -{1}(mul1n (2 ^ n.+1)) ltn_mul2r expn_gt0.
+      move => n H _.
+      have/H/negP: 0 < 2 ^ n.+1 < 2 ^ n.+2 by rewrite expn_gt0 //= ltn_exp2l.
       apply.
       rewrite pfactor_dvdn // -ltnS -[X in _ < X]addn1.
       have {3}->: 1 = logn 2 x.+1 by rewrite
