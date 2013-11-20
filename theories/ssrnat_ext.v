@@ -35,10 +35,10 @@ Proof.
   by rewrite mulnC; apply dvdn_lmull.
 Qed.
 
-Lemma poly1_eq1 x n :
-  iter n (fun a => (a * x).+1) 0 = \sum_(n' < n) x ^ n'.
+Lemma poly1_eq1 a n :
+  iter n (fun x => (x * a).+1) 0 = \sum_(n' < n) a ^ n'.
 Proof.
-  rewrite -(big_mkord xpredT (expn x)).
+  rewrite -(big_mkord xpredT (expn a)).
   elim: n => /=.
   - by rewrite big_nil.
   - move => n ->.
@@ -46,43 +46,39 @@ Proof.
     by apply f_equal, eq_bigr => i _; rewrite expnS mulnC.
 Qed.
 
-Lemma poly1_eq2 x n :
-  iter n (fun a => (a * x).+1) 0 * x.-1 = (x ^ n).-1.
+Lemma poly1_eq2 a n :
+  iter n (fun x => (x * a).+1) 0 * a.-1 = (a ^ n).-1.
 Proof.
-  case: x => //=.
+  case: a => //= [| a].
   - by rewrite muln0; case: n => //= n; rewrite exp0n.
-  - move => x.
-    elim: n => /=.
-    + by rewrite mul0n.
-    + move => n.
-      have ->: (x.+1 ^ n.+1).-1 = x + (x.+1 ^ n).-1 * x.+1.
-        rewrite expnS mulnC.
-        move: (erefl : (0 < x.+1) || (n == 0)).
-        by rewrite -expn_gt0; case: (x.+1 ^ n).
-      by move => <-; rewrite mulSn mulnAC.
+  - rewrite (pred_Sn (_ * _)); f_equal.
+    elim: n => //= n.
+    move: (iter _ _ _) => x.
+    rewrite expnS => <-.
+    by rewrite mulnS -addnS mulnDl -addSn -mulnS mulnC.
 Qed.
 
-Lemma poly1_eq3 x n m :
-  iter n (fun a => (a * x).+1) m = m * (x ^ n) + iter n (fun a => (a * x).+1) 0.
+Lemma poly1_eq3 a n m :
+  iter n (fun x => (x * a).+1) m = m * (a ^ n) + iter n (fun x => (x * a).+1) 0.
 Proof.
   elim: n m => //= [| n IH] m.
   - by rewrite expn0 muln1 addn0.
-  - by rewrite addnS expnS mulnCA (mulnC x) -mulnDl -IH.
+  - by rewrite addnS expnS mulnCA (mulnC a) -mulnDl -IH.
 Qed.
 
-Lemma poly1_leq x n m :
+Lemma poly1_leq a n m :
   n <= m ->
-  iter n (fun a => (a * x).+1) 0 <= iter m (fun a => (a * x).+1) 0.
+  iter n (fun x => (x * a).+1) 0 <= iter m (fun x => (x * a).+1) 0.
 Proof.
   elim: n m => //=.
   move => n IH [] //= m; rewrite !ltnS.
   by rewrite leq_mul2r; move/IH => ->; rewrite orbT.
 Qed.
 
-Lemma poly1_sub x n m :
+Lemma poly1_sub a n m :
   m <= n ->
-  iter n (fun a => (a * x).+1) 0 - iter m (fun a => (a * x).+1) 0 =
-  x ^ m * iter (n - m) (fun a => (a * x).+1) 0.
+  iter n (fun x => (x * a).+1) 0 - iter m (fun x => (x * a).+1) 0 =
+  a ^ m * iter (n - m) (fun x => (x * a).+1) 0.
 Proof.
   elim: m n => /=.
   - by move => n _; rewrite !subn0 expn0 mul1n.
@@ -90,13 +86,13 @@ Proof.
     by rewrite ltnS !subSS -mulnBl mulnC expnS -mulnA => H; f_equal; apply IH.
 Qed.
 
-Lemma poly1_add x y z m :
-  iter (y + z) (fun a => (a * x).+1) 0 =
-  iter y (fun a => (a * x).+1) (iter z (fun a => (a * x).+1) 0 %% m) %[mod m].
+Lemma poly1_add a n n' m :
+  iter (n + n') (fun x => (x * a).+1) 0 =
+  iter n (fun x => (x * a).+1) (iter n' (fun x => (x * a).+1) 0 %% m) %[mod m].
 Proof.
-  apply/eqP; elim: y.
+  apply/eqP; elim: n.
   - by rewrite add0n /= modn_mod.
-  - move => y IH.
+  - move => n IH.
     rewrite addSn /= -!(addn1 (_ * _)) eqn_modDr -!(modnMml (iter _ _ _)).
     by move/eqP: IH => ->.
 Qed.
@@ -151,15 +147,15 @@ Proof.
   by apply Fermat'.
 Qed.
 
-Lemma LemmaP p x :
-  prime p -> 2 < p ^ logn p x -> logn p (x.+1 ^ p).-1 = (logn p x).+1.
+Lemma LemmaP p e :
+  prime p -> 2 < p ^ logn p e -> logn p (e.+1 ^ p).-1 = (logn p e).+1.
 Proof.
-  move: p x => [] // [] // p [| []]; rewrite ?logn0 ?logn1 ?expn0 // => x H H0.
+  move: p e => [] // [] // p [| []]; rewrite ?logn0 ?logn1 ?expn0 // => e H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
           big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0) big_map.
   have/(eq_bigr _) -> i: true ->
-      'C(p.+2, i.+2) * x.+2 ^ i.+2 = x.+2 * (x.+2 * ('C(p.+2, i.+2) * x.+2 ^ i))
-    by rewrite !expnS 2!(mulnCA x.+2).
+      'C(p.+2, i.+2) * e.+2 ^ i.+2 = e.+2 * (e.+2 * ('C(p.+2, i.+2) * e.+2 ^ i))
+    by rewrite !expnS 2!(mulnCA e.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
   move: H0; rewrite lognE H /=; case: ifP => //.
   rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
