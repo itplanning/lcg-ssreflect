@@ -1,7 +1,6 @@
 Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
-  Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype.
-Require Import
+  Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
 Require Import LCG.seq_ext.
 

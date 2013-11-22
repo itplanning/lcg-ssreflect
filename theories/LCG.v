@@ -3,7 +3,7 @@ Require Import
   Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.finset
   MathComp.binomial.
-Require Import Coq.Program.Wf LCG.seq_ext LCG.ssrnat_ext.
+Require Import LCG.seq_ext LCG.ssrnat_ext.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
