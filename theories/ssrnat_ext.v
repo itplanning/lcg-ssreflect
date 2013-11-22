@@ -92,7 +92,7 @@ Proof.
   apply/eqP; elim: n.
   - by rewrite add0n /= modn_mod.
   - move => n IH.
-    rewrite addSn /= -!(addn1 (_ * _)) eqn_modDr -!(modnMml (iter _ _ _)).
+    rewrite addSn /= (eqn_modDl 1) -!(modnMml (iter _ _ _)).
     by move/eqP: IH => ->.
 Qed.
 
@@ -113,37 +113,31 @@ Proof.
   by f_equal; apply eq_bigr => i _; rewrite exp1n mul1n.
 Qed.
 
-Lemma Fermat' p x : prime p -> p %| (x ^ p) - x.
+Lemma Fermat' p x : prime p -> (x ^ p) = x %[mod p].
 Proof.
-  move: p => [] // [] // p H; elim: x.
+  move: p => [] // [] // p H; elim: x => [| x IH].
   - by rewrite exp0n.
-  - move => x IH.
-    rewrite expSS /= addSn subSS addnC -addnBA.
-    + rewrite dvdn_addr // big_nat.
-      apply big_ind => //.
-      * apply dvdn_add.
-      * by move => i H0; apply dvdn_mulr, prime_dvd_bin.
-    + by rewrite leq_expnl /= orbT.
+  - apply/eqP.
+    rewrite expSS /= addSn (eqn_modDl 1) -IH
+            -{2}(addn0 (x ^ _)) eqn_modDl mod0n -/(dvdn _ _) big_nat.
+    apply big_ind => //.
+    + apply dvdn_add.
+    + by move => i H0; apply dvdn_mulr, prime_dvd_bin.
 Qed.
 
-Lemma Fermat'' p x n : prime p -> p %| x ^ p ^ n - x.
+Lemma Fermat'' p x n : prime p -> x ^ p ^ n = x %[mod p].
 Proof.
   move: p => [] // [] // p H; elim: n x.
-  - by move => x; rewrite expn0 expn1 subnn.
-  - move => n IH x.
-    rewrite expnS expnM.
-    rewrite -(@subnK (x ^ p.+2) ((x ^ p.+2) ^ p.+2 ^ n)).
-    + rewrite -addnBA.
-      * by apply dvdn_add => //; apply Fermat'.
-      * by rewrite leq_expnl /= orbT.
-    + by rewrite leq_expnl expn_gt0 /= orbT.
+  - by move => x; rewrite expn0 expn1.
+  - by move => n IH x; rewrite expnS expnM -(Fermat' x H).
 Qed.
 
 Lemma Fermat p x : prime p -> coprime p x -> p %| (x ^ p.-1).-1.
 Proof.
-  case: p => //= p H H0.
-  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS.
-  by apply Fermat'.
+  move: p => [] // [] //= p H H0.
+  rewrite -(Gauss_dvdr _ H0) -subn1 mulnBr muln1 -expnS -eqn_mod_dvd.
+  - by apply/eqP/Fermat'.
+  - by rewrite leq_expnl orbT.
 Qed.
 
 Lemma LemmaP p e :
@@ -228,11 +222,10 @@ Proof.
     subst zero.
     apply/negP; move/negP => H0; move: H2.
     rewrite -(@Gauss_dvdl (p.+2 ^ e.+1) _ a.+1) ?poly1_eq2.
-    + rewrite {1}expnS.
-      move/dvdn_lmull/(fun h => dvdn_sub h (Fermat'' a.+2 e.+1 H)).
-      apply/negP.
-      by rewrite -subn1 subnAC subnBA ?addKn ?subn1 //
-         -{1}(expn1 a.+2) leq_exp2l // expn_gt0.
+    + move => H1; move/negP: H0; apply; move: H1.
+      rewrite {1}expnS; move/dvdn_lmull.
+      by rewrite /dvdn -(mod0n p.+2) -(eqn_modDl 1) !add1n
+                 prednK ?expn_gt0 // Fermat'' // (eqn_modDl 1) mod0n.
     + by rewrite coprime_pexpl // prime_coprime.
   - move => /= H7 H6; apply: H7.
     have {H0 H1 H4 H6} H0 m:
