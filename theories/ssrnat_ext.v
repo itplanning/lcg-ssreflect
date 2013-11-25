@@ -2,7 +2,6 @@ Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
   Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
   MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
-Require Import LCG.seq_ext.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -10,13 +9,6 @@ Import Prenex Implicits.
 
 Lemma leqpp m n : m <= n -> m.-1 <= n.-1.
 Proof. by case: m => //=; case: n. Qed.
-
-Lemma leq_expnl n m : (n <= n ^ m) = ((n < 2) || (0 < m)).
-Proof.
-  case: n m => // n [| m] /=.
-  - by rewrite ltnn orbF expn0.
-  - by rewrite ltn0Sn orbT expnS -{1}(muln1 (n.+1)) leq_mul // expn_gt0.
-Qed.
 
 Lemma dvdn_lmull d1 d2 m : d1 * d2 %| m -> d1 %| m.
 Proof.
