@@ -107,21 +107,18 @@ Proof.
                    prednK ?expn_gt0 // Fermat // (eqn_modDl 1) mod0n => ->.
       + by rewrite coprime_pexpl //= prime_coprime.
     case: ifP => //; case/eqP => ?; subst p => /= {H}.
-    case: a H0 H1 H2 => // a H H0 H1.
-    rewrite /dvdn -![a.+2 %% _](modnDmr 2) -(@modn_dvdm 4 a 2) // modnDmr.
-    suff: ~ a %% 4 == 0 by move: (a %% 4) (@ltn_pmod a 4 erefl) => [|[|[|[]]]].
-    case: e H H0; first by rewrite expn1.
-    move => e H H0; rewrite -/(dvdn _ _) => H2.
-    have/(contra (proj1 (H0 _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
+    case: a e H0 H1 H2 => // a []; rewrite ?expn1 // => e _ H H0.
+    suff: ~ (4 %| a).
+      rewrite /dvdn -![a.+2 %% _](modnDmr 2) -(@modn_dvdm 4 a 2) // modnDmr.
+      by move: (a %% 4) (@ltn_pmod a 4 erefl); do 4 case => //.
+    have/(contra (proj1 (H _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
       by rewrite expnS -{2}(mul1n (_ ^ _)) dvdn_pmul2r // expn_gt0.
-    apply.
-    rewrite pfactor_dvdn // -ltnS -[X in _ < X]add1n.
-    have {1}->: 1 = logn 2 a.+3.-1 by rewrite
-      2!lognE divn_gt0 //= dvdn_divRL
-      (@dvdn_addr 2) // (@dvdn_lmulr 2 2) // (dvdn_addl 2 H2).
-    rewrite -lognM // -predn_exp.
-    elim: e {H H0 H1}.
-    + case/dvdnP: H2 => k ->.
+    move => H2 H1; apply: H2.
+    rewrite pfactor_dvdn // -(leq_add2l (logn 2 a.+3.-1)) -lognM // -predn_exp
+            2!lognE divn_gt0 //= dvdn_divRL (@dvdn_addr 2) //
+            (@dvdn_lmulr 2 2) // (dvdn_addl 2 H1) /= add1n.
+    elim: e {H H0}.
+    + case/dvdnP: H1 => k ->.
       rewrite -pfactor_dvdn // expn1 (sqrnD 3) (erefl : 3 ^ 2 = 9) 2!addSn /=.
       apply dvdn_add; first apply dvdn_add => //.
       * by rewrite expnMn; apply dvdn_mull.
