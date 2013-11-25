@@ -92,8 +92,7 @@ Proof.
   move: p a e => [] // [] // p [] // [] // a [] // e H;
     case/andP; rewrite !ltnS => _ H0 H1.
   have H2 m: 0 < \sum_(k < p.+2 ^ m) a.+2 ^ k.
-    rewrite
-      -(andTb (_ < _)) (erefl : true = (0 < a.+2.-1)) -muln_gt0 -predn_exp.
+    apply (@proj2 (0 < a.+2.-1)); apply/andP; rewrite -muln_gt0 -predn_exp.
     apply (@leqpp 2), (@leq_trans a.+2) => //.
     by rewrite -{1}(expn1 a.+2) leq_exp2l // expn_gt0.
   apply/esym/idP; case: ifP; move/eqP.
@@ -120,7 +119,7 @@ Proof.
       rewrite -pfactor_dvdn // (sqrnD 3) (erefl : 3 ^ 2 = 9) 2!addSn /=.
       apply dvdn_add; first apply dvdn_add => //.
       + by rewrite expnMn; apply dvdn_mull.
-      + by rewrite (mulnC a) (mulnCA 3) mulnA; apply dvdn_mulr.
+      + by rewrite -!(mulnCA a); apply dvdn_mull.
     rewrite pfactor_dvdn // -(leq_add2l (logn 2 a.+3.-1)) -lognM // -predn_exp
             2!lognE divn_gt0 //= dvdn_divRL (@dvdn_addr 2) //
             (@dvdn_lmulr 2 2) // (dvdn_addl 2 H) /= add1n expnS expnM
@@ -137,5 +136,5 @@ Proof.
     rewrite -lognM // -predn_exp /= LemmaP' //.
     case: p a H H3 {H0 H1 H2} => /= [[] // a _ H | p a H H0].
     + by rewrite 2!lognE /= divn_gt0 //= dvdn_divRL (@dvdn_lmull 2 2) // H.
-    + by rewrite lognE H H0 /=.
+    + by rewrite lognE H H0.
 Qed.
