@@ -97,8 +97,11 @@ Proof.
     -(andTb (_ < _)) (erefl : true = (0 < a.+2.-1)) -muln_gt0 -predn_exp.
   apply/esym/idP; case: ifP; move/eqP.
   - move => ?; subst l.
-    have {H0 H2 H3} H4: p = 0 -> a %% 4 <> 1.
-      move => ? {H}; subst p.
+    suff {H0 H2 H3}: p.+2 %| a.+1.
+      case: ifP => //; case/eqP => ?; subst p => /= {H}.
+      rewrite /dvdn -![a.+1 %% _](modnDmr 1) -(@modn_dvdm 4 a 2) // modnDmr.
+      suff: a %% 4 <> 1
+        by move: (a %% 4) (@ltn_pmod a 4 erefl); do 4 case => //.
       case: e H0 H1; first by rewrite expn1.
       move => e _ H H0.
       have/(contra (proj1 (H _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
@@ -108,25 +111,17 @@ Proof.
       have {1}->: 1 = logn 2 a.+2.-1 by rewrite
         (divn_eq a 4) H0 -addnS /= {2}(erefl : 4 = 2 * 2) mulnA -mulSnr
         lognM // lognE /= -{1}(addn1 (_ * _)) dvdn_addr //= dvdn_mull.
-      rewrite -lognM // -predn_exp -pfactor_dvdn //.
+      rewrite -lognM // -predn_exp.
       elim: e {H H2 H3}.
-      + rewrite expn1 (divn_eq a 4) H0 -!addnS
+      + rewrite -pfactor_dvdn // expn1 (divn_eq a 4) H0 -!addnS
                 sqrnD addnAC (erefl : 3 ^ 2 = 9) addnS /=.
         do 2 apply dvdn_add => //.
         * by rewrite expnMn (erefl : 4 ^ 2 = 2 * 8) mulnA dvdn_mull.
         * by rewrite (@dvdn_pmul2l 2 4) // mulnAC dvdn_mull.
       + move => e IH.
-        rewrite (expnS 2 e.+1) mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0 //
-                -(addn1 _.-1) sqrnD muln1 addn1 addSn /= expnS.
-        apply dvdn_add; rewrite dvdn_mul //.
-        by move: IH; rewrite expnS; apply dvdn_lmull.
-    suff {H4}: p.+2 %| a.+1.
-      case: ifP => //; move/eqP.
-      case => ?; subst.
-      rewrite (divn_eq a 4) -!addnS /dvdn
-              {2}(erefl : 4 = 2 * 2) {1}mulnA !addnS /= -!addnS !modnMDl.
-      move: (a %% 4) (@ltn_pmod a 4 erefl) (H4 erefl).
-      do 4 case => //.
+        rewrite expnS mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0 // LemmaP //.
+        move: (logn _ _) IH => [| []] // n _; rewrite !expnS mulnA.
+        by apply (@leq_mul 3 1) => //; rewrite expn_gt0.
     apply/negP; move/negP => H0.
     move: (proj2 (H1 (p.+2 ^ e.+1)) (dvdnn _)).
     rewrite -(@Gauss_dvdr (p.+2 ^ e.+1) a.+2.-1).
