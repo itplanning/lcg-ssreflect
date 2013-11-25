@@ -61,9 +61,9 @@ Proof.
 Qed.
 
 Lemma LemmaP p e :
-  prime p -> 2 < p ^ logn p e -> logn p (e.+1 ^ p).-1 = (logn p e).+1.
+  prime p -> (p == 2) < logn p e -> logn p (e.+1 ^ p).-1 = (logn p e).+1.
 Proof.
-  move: p e => [] // [] // p [| []]; rewrite ?logn0 ?logn1 ?expn0 // => e H H0.
+  move: p e => [] // [] // p [| []]; rewrite ?logn0 ?logn1 // => e H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
           big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0) big_map.
   have/(eq_bigr _) -> i: true ->
@@ -71,7 +71,7 @@ Proof.
     by rewrite !expnS 2!(mulnCA e.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
   move: H0; rewrite lognE H /=; case: ifP => //.
-  rewrite dvdn_eq expnS; move/eqP/esym => H0 H1.
+  rewrite dvdn_eq; move/eqP/esym => H0 H1.
   rewrite {1}H0 mulnAC -mulSn lognM // (pfactorK 1 H) addn1.
   f_equal; rewrite lognE H /= (dvdn_addl 1) //.
   case: p H H0 H1 => [_ _ | p H H0 _].
@@ -81,6 +81,15 @@ Proof.
     + rewrite (big_nat _ _ 0 p.+1).
       by apply big_rec => // n m H1 H2;
         apply dvdn_add => //; apply dvdn_mulr, prime_dvd_bin.
+Qed.
+
+Lemma LemmaP' p e n :
+  prime p -> (p == 2) < logn p e -> logn p (e.+1 ^ p ^ n).-1 = logn p e + n.
+Proof.
+  move => H H0.
+  elim: n => // n IH.
+  rewrite expnSr expnM -(@prednK (e.+1 ^ _)) ?expn_gt0 // LemmaP // {}IH //.
+  by apply ltn_addr.
 Qed.
 
 Lemma LemmaR p a e l :
@@ -114,19 +123,18 @@ Proof.
     have/(contra (proj1 (H _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
       by rewrite expnS -{2}(mul1n (_ ^ _)) dvdn_pmul2r // expn_gt0.
     move => {H} H1 H; apply: H1.
+    have H1: 2 < logn 2 (a.+3 ^ 2).-1.
+      case/dvdnP: H {H0} => {a} a ->.
+      rewrite -pfactor_dvdn // (sqrnD 3) (erefl : 3 ^ 2 = 9) 2!addSn /=.
+      apply dvdn_add; first apply dvdn_add => //.
+      + by rewrite expnMn; apply dvdn_mull.
+      + by rewrite (mulnC a) (mulnCA 3) mulnA; apply dvdn_mulr.
     rewrite pfactor_dvdn // -(leq_add2l (logn 2 a.+3.-1)) -lognM // -predn_exp
             2!lognE divn_gt0 //= dvdn_divRL (@dvdn_addr 2) //
-            (@dvdn_lmulr 2 2) // (dvdn_addl 2 H) /= add1n.
-    elim: e {H0}.
-    + case/dvdnP: H => {a} a ->.
-      rewrite -pfactor_dvdn // expn1 (sqrnD 3) (erefl : 3 ^ 2 = 9) 2!addSn /=.
-      apply dvdn_add; first apply dvdn_add => //.
-      * by rewrite expnMn; apply dvdn_mull.
-      * by rewrite (mulnC a) (mulnCA 3) mulnA; apply dvdn_mulr.
-    + move => e IH.
-      rewrite expnS mulnC expnM -(@prednK (_ ^ _ ^ _)) ?expn_gt0 // LemmaP //.
-      move: (logn _ _) IH => [| []] // n _; rewrite !expnS mulnA.
-      by apply (@leq_mul 3 1) => //; rewrite expn_gt0.
+            (@dvdn_lmulr 2 2) // (dvdn_addl 2 H) /= add1n expnS expnM
+            -(@prednK (a.+3 ^ _)) ?expn_gt0 // LemmaP' //.
+    + by rewrite (leq_add2r e 3).
+    + by rewrite ltnW.
   - move => /= H4 H3; apply: H4.
     suff H4 m: logn p.+2 (\sum_(k < p.+2 ^ m) a.+2 ^ k) = m.
       move: (proj1 (H1 (p.+2 ^ e.+1))) => {H3}.
@@ -134,13 +142,8 @@ Proof.
       case/(dvdn_pfactor _ _ H) => y H3 ?; subst l; f_equal; apply/eqP.
       by rewrite eqn_leq H3 /= -(H4 y) -pfactor_dvdn //; apply H1, dvdnn.
     apply (@addnI (logn p.+2 a.+2.-1)).
-    rewrite -lognM // -predn_exp /=.
-    elim: m => // m IH.
-    rewrite expnSr expnM -(@prednK (a.+2 ^ _)) ?expn_gt0 // LemmaP // {}IH //.
-    move: p a H H3 {H0 H1 H2} => [[] | p] //= a H H0.
-    + by rewrite
-        2!lognE /= dvdn_divRL ?H2 (@dvdn_lmulr 2 2) // divn_gt0 //= H0
-        !addSn !expnS (@ltn_pmul2l 2 1) // (@leq_pmul2l 2 1) // expn_gt0.
-    + rewrite lognE H H0 /= addSn expnS.
-      by apply (@leq_mul 3 1) => //; rewrite expn_gt0.
+    rewrite -lognM // -predn_exp /= LemmaP' //.
+    case: p a H H3 {H0 H1 H2} => /= [[] // a _ H | p a H H0].
+    + by rewrite 2!lognE /= divn_gt0 //= dvdn_divRL (@dvdn_lmull 2 2) // H.
+    + by rewrite lognE H H0 /=.
 Qed.
