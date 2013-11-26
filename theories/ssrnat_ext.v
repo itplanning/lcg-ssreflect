@@ -136,3 +136,26 @@ Proof.
     case/(dvdn_pfactor _ _ H) => y H0 ?; subst l; f_equal; apply/eqP.
     by rewrite eqn_leq H0 /= -(H3 y) -pfactor_dvdn //; apply H1.
 Qed.
+
+Lemma contains_zero p a e :
+  prime p -> a %% p = 1 -> p ^ e %| \sum_(k < p ^ e) a ^ k.
+Proof.
+  move: p a => [| []] // p [| [| a]] // H H0.
+  - by rewrite -(big_mkord xpredT) (eq_bigr _ (fun n _ => exp1n n))
+               sum_nat_const_nat subn0 muln1.
+  - have: 0 < \sum_(k < p.+2 ^ e) a.+2 ^ k.
+      apply (@proj2 (0 < a.+2.-1)); apply/andP; rewrite -muln_gt0 -predn_exp.
+      apply (@leqpp 2), (@leq_trans a.+2) => //.
+      by rewrite -{1}(expn1 a.+2) leq_exp2l // expn_gt0.
+    move/eqP: H0.
+    rewrite -{1}(@modn_small 1 p.+2) // (eqn_modDl 1) mod0n -/(_ %| _) => H0 H1.
+    rewrite pfactor_dvdn // -(leq_add2l (logn p.+2 a.+2.-1)) -lognM //
+            -predn_exp /=.
+    case: p e H H0 {H1} => [[| e] _ H | p e H H0].
+    + by rewrite expn0 expn1 addn0.
+    + rewrite
+        expnS expnM (sqrnD 1) add1n addSn mul1n expnS expn1 -mulnDl LemmaP' //=.
+      * by rewrite addnS lognM // -addnA (leq_add2r _ 1) lognE dvdn_addr.
+      * by rewrite lognM // lognE dvdn_addr //= addSn addnC lognE H.
+    + by rewrite LemmaP' //= lognE H H0.
+Qed.
