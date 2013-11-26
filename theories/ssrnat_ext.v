@@ -84,6 +84,42 @@ Proof.
   by apply ltn_addr.
 Qed.
 
+Lemma LemmaQ m a l :
+  (forall p e l', (p, e) \in prime_decomp m ->
+                  (p ^ e %| \sum_(k < l') a ^ k <-> p ^ e %| l')) ->
+  (m %| \sum_(k < l) a ^ k <-> m %| l).
+Proof.
+  case: m => [_ | m] /=.
+  - rewrite !dvd0n; case: l => [| l].
+    + by rewrite big_ord0.
+    + by rewrite (big_ord_recl l) /= expn0 add1n.
+  - rewrite {2 3}(@prod_prime_decomp m.+1 erefl) prime_decompE big_map /= => H.
+    have {H} H p l': prime p -> p %| m.+1 ->
+      (p ^ logn p m.+1 %| \sum_(k < l') a ^ k <-> p ^ logn p m.+1 %| l')
+      by move => H0 H1; apply H, (map_f (fun p => (p, logn p m.+1)));
+         rewrite mem_primes H0.
+    have: forall p, p \in primes m.+1 -> prime p && (p %| m.+1)
+      by move => p; rewrite mem_primes /=.
+    elim: (primes m.+1) (primes_uniq m.+1) => /=.
+    + by rewrite big_nil.
+    + move => p ps IH; case/andP => H0 H1 H2.
+      case/andP: (H2 p (mem_head _ _)) => H3 H4.
+      have H5: coprime (p ^ logn p m.+1) (\prod_(j <- ps) j ^ logn j m.+1).
+        rewrite big_seq; apply big_ind => /=.
+        * apply coprimen1.
+        * by move => x y; rewrite coprime_mulr => ->.
+        * move => i H5.
+          apply coprime_expl, coprime_expr.
+          move: (H2 i); rewrite inE H5 orbT => H2';
+            case/andP: {H2'} (H2' erefl) => H6 H7.
+          rewrite prime_coprime // dvdn_prime2 //.
+          by apply/eqP => ?; subst i; rewrite H5 in H0.
+      rewrite big_cons !Gauss_dvd //.
+      split; case/andP => H6 H7; apply/andP; (split;
+        [ by apply H |
+          by apply IH => // p' H8; apply H2; rewrite inE H8 orbT ]).
+Qed.
+
 Lemma LemmaR p a e l :
   prime p -> 1 < a < p ^ e ->
   (forall l', p ^ e %| \sum_(k < l') a ^ k <-> l %| l') ->
