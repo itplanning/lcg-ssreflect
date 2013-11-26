@@ -126,15 +126,13 @@ Proof.
             -(@prednK (a.+3 ^ _)) ?expn_gt0 // LemmaP' //.
     + by rewrite (leq_add2r e 3).
     + by rewrite ltnW.
-  - move => /= H4 H3; apply: H4.
-    suff H4 m: logn p.+2 (\sum_(k < p.+2 ^ m) a.+2 ^ k) = m.
-      move: (proj1 (H1 (p.+2 ^ e.+1))) => {H3}.
-      rewrite pfactor_dvdn // (H4 e.+1) leqnn => H3; move: {H3} (H3 erefl).
-      case/(dvdn_pfactor _ _ H) => y H3 ?; subst l; f_equal; apply/eqP.
-      by rewrite eqn_leq H3 /= -(H4 y) -pfactor_dvdn //; apply H1, dvdnn.
-    apply (@addnI (logn p.+2 a.+2.-1)).
-    rewrite -lognM // -predn_exp /= LemmaP' //.
-    case: p a H H3 {H0 H1 H2} => /= [[] // a _ H | p a H H0].
-    + by rewrite 2!lognE /= divn_gt0 //= dvdn_divRL (@dvdn_lmull 2 2) // H.
-    + by rewrite lognE H H0.
+  - move => /= {H0} H3 H0; apply: H3.
+    have {H0} H3 m: logn p.+2 (\sum_(k < p.+2 ^ m) a.+2 ^ k) = m.
+      apply (@addnI (logn p.+2 a.+2.-1)) => {H1}.
+      rewrite -lognM // -predn_exp /= LemmaP' // -pfactor_dvdn //.
+      by case: p H0 {H H2}.
+    move: (proj1 (H1 (p.+2 ^ e.+1))).
+    rewrite pfactor_dvdn // (H3 e.+1) leqnn => H0; move: {H0} (H0 erefl).
+    case/(dvdn_pfactor _ _ H) => y H0 ?; subst l; f_equal; apply/eqP.
+    by rewrite eqn_leq H0 /= -(H3 y) -pfactor_dvdn //; apply H1.
 Qed.
