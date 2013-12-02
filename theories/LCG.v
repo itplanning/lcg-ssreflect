@@ -94,6 +94,7 @@ Proof.
   by apply ltn_addr.
 Qed.
 
+(*
 Lemma LemmaP'' p e n :
   0 < e -> prime p -> p %| e.-1 ->
   logn p (\sum_(k < p ^ n) e ^ k) =
@@ -102,18 +103,17 @@ Proof.
   move: p e => [| []] // p [| [| e]] //= _ H H0.
   - by rewrite -(big_mkord xpredT) (eq_bigr _ (fun n _ => exp1n n))
                sum_nat_const_nat subn0 muln1 pfactorK.
-  - have H1: 0 < \sum_(k < p.+2 ^ n) e.+2 ^ k by rewrite
-      -(big_mkord xpredT) -(@prednK (_ ^ _)) ?expn_gt0 // big_nat_recl /= expn0.
-    apply (@addnI (logn p.+2 e.+2.-1)).
-    rewrite -lognM // -predn_exp.
-    case: p H H0 H1 => [_ H H0 | p H H0 H1].
-    + case: n H0 => //= n H0.
+  - apply (@addnI (logn p.+2 e.+2.-1)).
+    rewrite -lognM ?sum_expn_gt0 ?expn_gt0 // -predn_exp.
+    case: p H H0 => [_ H | p H H0].
+    + case: n => //= n.
       rewrite expnS expnM (sqrnD 1) add1n addSn mul1n
               expnS expn1 -mulnDl addn2 LemmaP' //= lognM //.
       * by rewrite (addnC n) (addnC (logn _ _)) addnA.
       * by rewrite lognE addnC lognE (dvdn_addr _ (dvdnn 2)) H addnS.
     + by rewrite andbF LemmaP' //= lognE H H0.
 Qed.
+*)
 
 Lemma LemmaQ m a l :
   (forall l', all
@@ -155,8 +155,6 @@ Lemma LemmaR' p a e l :
   (l == p ^ e) = ((if (1 < e) && (p == 2) then 4 else p) %| a.-1).
 Proof.
   move: p a e => [| []] // p [] // a [] //= e H _ _ H0.
-  have H1 m: 0 < \sum_(k < p.+2 ^ m) a.+1 ^ k by rewrite
-    -(big_mkord xpredT) -(@prednK (_ ^ _)) ?expn_gt0 // big_nat_recl /= expn0.
   apply/esym/idP; case: ifP; move/eqP.
   - move => ?; subst l; rewrite ltnS.
     have: p.+2 %| a.
@@ -168,14 +166,14 @@ Proof.
         by rewrite /dvdn -{1}(mod0n p.+2) -(eqn_modDl 1) !add1n
                    prednK ?expn_gt0 // Fermat // (eqn_modDl 1) mod0n => ->.
       + by rewrite coprime_pexpl //= prime_coprime.
-    move: a e p H H0 H1 => [| []] // a [] // e [] //= _ H H0.
+    move: a e p H H0 => [| []] // a [] // e [] //= _ H.
     suff: ~ (4 %| a).
       rewrite /dvdn -![a.+2 %% _](modnDmr 2) -(@modn_dvdm 4 a 2) // modnDmr.
       by move: (a %% 4) (@ltn_pmod a 4 erefl); do 4 case => //.
     have/(contra (proj1 (H _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
       by rewrite expnS -{2}(mul1n (_ ^ _)) dvdn_pmul2r // expn_gt0.
     move => {H} H1 H; apply: H1.
-    rewrite pfactor_dvdn // LemmaP'' //=.
+    rewrite pfactor_dvdn ?sum_expn_gt0 ?expn_gt0 // LemmaP'' //=.
     + by rewrite addnC (ltn_add2r e 1) -pfactor_dvdn.
     + by rewrite (dvdn_addl 2) //; apply (@dvdn_lmulr 2 2).
   - rewrite ltnS; move => /= H3 H2; apply: H3.
@@ -185,44 +183,45 @@ Abort.
 
 Lemma LemmaR p a e l :
   prime p -> 1 < a -> 2 < p ^ e ->
-  (forall l', p ^ e %| \sum_(k < l') a ^ k <-> l %| l') ->
+  (forall l', (p ^ e %| \sum_(k < l') a ^ k) = (l %| l')) ->
   (l == p ^ e) = ((if p == 2 then 4 else p) %| a.-1).
 Proof.
   move: p a e => [| []] // p [| []] // a [] // e H _ H0 H1.
-  have H2 m: 0 < \sum_(k < p.+2 ^ m) a.+2 ^ k by rewrite
-    -(big_mkord xpredT) -(@prednK (_ ^ _)) ?expn_gt0 // big_nat_recl /= expn0.
   apply/esym/idP; case: ifP; move/eqP.
   - move => ?; subst l.
     have: p.+2 %| a.+1.
-      apply/negP; move/negP => {H0 H2} H0.
-      move: (proj2 (H1 (p.+2 ^ e.+1)) (dvdnn _)).
-      rewrite -(@Gauss_dvdr (p.+2 ^ e.+1) a.+2.-1).
-      + rewrite -predn_exp {1}expnS; move/dvdn_lmull.
-        move => H2; move: H2 H0.
+      apply/negP; move/negP => {H0} H0.
+      move: (H1 (p.+2 ^ e.+1)).
+      rewrite dvdnn -(@Gauss_dvdr (p.+2 ^ e.+1) a.+2.-1).
+      + move => H2; apply/(negP H0); move: H2.
+        rewrite -predn_exp {1}expnS; move/dvdn_lmull.
         by rewrite /dvdn -{1}(mod0n p.+2) -(eqn_modDl 1) !add1n
-                   prednK ?expn_gt0 // Fermat // (eqn_modDl 1) mod0n => ->.
+                   prednK ?expn_gt0 // Fermat // (eqn_modDl 1) mod0n.
       + by rewrite coprime_pexpl //= prime_coprime.
     case: ifP => //; case/eqP => ?; subst p => /= {H}.
-    case: a e H0 H1 H2 => // a []; rewrite ?expn1 // => e _ H H0.
-    suff: ~ (4 %| a).
+    case: a e H0 H1 => // a []; rewrite ?expn1 // => e _ H.
+    suff: ~~ (4 %| a).
       rewrite /dvdn -![a.+2 %% _](modnDmr 2) -(@modn_dvdm 4 a 2) // modnDmr.
       by move: (a %% 4) (@ltn_pmod a 4 erefl); do 4 case => //.
-    have/(contra (proj1 (H _)))/negP: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
+    have: ~~ (2 ^ e.+2 %| 2 ^ e.+1)
       by rewrite expnS -{2}(mul1n (_ ^ _)) dvdn_pmul2r // expn_gt0.
-    move => {H} H1 H; apply: H1.
-    rewrite pfactor_dvdn // LemmaP'' //=.
-    + by rewrite addnC (ltn_add2r e 1) 2!lognE divn_gt0 //= dvdn_divRL
-                 !(@dvdn_addr 4 _ a) // (@dvdn_lmulr 2 2 a) // H.
-    + by rewrite (dvdn_addl 2) //; apply (@dvdn_lmull 2 2).
+    rewrite -H; apply contra => {H} H.
+    by rewrite
+      pfactor_dvdn -1?(ltn_add2l (logn 2 a.+3.-1) e.+1) -?lognM ?sum_expn_gt0
+      ?expn_gt0 // -predn_exp expnS expnM -(@prednK (a.+3 ^ _)) ?expn_gt0 //
+      LemmaP' // (sqrnD 1) add1n addSn /= mul1n expnS expn1 -mulnDl lognM //=
+      addn2 ?addnS -?addnA ?(ltn_add2r _ 1) 2!lognE /= divn_gt0 //= dvdn_divRL
+      ?(dvdn_addr _ (dvdnn 4)) (@dvdn_addr 4 2 _) // (@dvdn_lmulr 2 2 a H) // H.
   - move => /= {H0} H3 H0; apply: H3.
     have {H0} H3 m: logn p.+2 (\sum_(k < p.+2 ^ m) a.+2 ^ k) = m.
       apply (@addnI (logn p.+2 a.+2.-1)) => {H1}.
-      rewrite -lognM // -predn_exp /= LemmaP' // -pfactor_dvdn //.
-      by case: p H0 {H H2}.
-    move: (proj1 (H1 (p.+2 ^ e.+1))).
-    rewrite pfactor_dvdn // (H3 e.+1) leqnn => H0; move: {H0} (H0 erefl).
-    case/(dvdn_pfactor _ _ H) => y H0 ?; subst l; f_equal; apply/eqP.
-    by rewrite eqn_leq H0 /= -(H3 y) -pfactor_dvdn //; apply H1.
+      rewrite -lognM ?sum_expn_gt0 ?expn_gt0 //
+              -predn_exp /= LemmaP' // -pfactor_dvdn //.
+      by case: p H0 {H}.
+    move: (H1 (p.+2 ^ e.+1)).
+    rewrite pfactor_dvdn ?sum_expn_gt0 ?expn_gt0 // (H3 e.+1) leqnn.
+    case/esym/(dvdn_pfactor _ _ H) => y H0 ?; subst l; f_equal; apply/eqP.
+    by rewrite eqn_leq H0 -(H3 y) -pfactor_dvdn ?sum_expn_gt0 ?expn_gt0 //= H1.
 Qed.
 
 Lemma contains_zero p a e :
@@ -323,14 +322,13 @@ Proof.
   move: H; rewrite !looping_uniq /looping; apply contra.
   case/trajectP => j H3 H4.
   apply/trajectP; exists j => //; move: H4.
-  by rewrite -H0 H2 -!iter_add !(addnC cM'.+1) !(addnC j) -{6 8}(subnK (ltnW H1))
-             -!(addnA (cM - i)) !(iter_add (cM - i)) => ->.
+  by rewrite -H0 H2 -!iter_add !(addnC cM'.+1) !(addnC j)
+    -{6 8}(subnK (ltnW H1)) -!(addnA (cM - i)) !(iter_add (cM - i)) => ->.
 Qed.
 
 Lemma fp_equiv2 :
-  full_period (inord 0) <->
-  forall m n, (m == n %[mod cM]) =
-              (iter m nextr (inord 0) == iter n nextr (inord 0)).
+  full_period 0%R <->
+  forall m n, (m == n %[mod cM]) = (iter m nextr 0%R == iter n nextr 0%R).
 Proof.
   rewrite /full_period; split;
     [ case/andP => H H0 m n | move => H; apply/andP; split ].
@@ -348,37 +346,22 @@ Proof.
 Qed.
 
 Lemma fp_equiv3 :
-  (forall m n, (m == n %[mod cM]) =
-               (iter m nextr (inord 0) == iter n nextr (inord 0))) <->
+  (forall m n, (m == n %[mod cM]) = (iter m nextr 0%R == iter n nextr 0%R)) <->
   (coprime cM cC /\
    forall m n, (m == n %[mod cM]) =
                (\sum_(k < m) cA ^ k == \sum_(k < n) cA ^ k %[mod cM])).
 Proof.
-  (split => [H | [H H0]]; first split) => [ | m n | m n ].
-  - have {H} H m n: (m == n %[mod cM]) =
-        (\sum_(k < m) cA ^ k ==
-         \sum_(k < n) cA ^ k %[mod cM %/ gcdn cM cC]).
-      rewrite H eqE /= !general_term_0.
-      move: (dvdn_gcdl cM cC) (dvdn_gcdr cM cC); rewrite !dvdn_eq.
-      move/eqP => {9 12}<-; move/eqP => {1 4}<-.
-      rewrite !(mulnAC _ (gcdn _ _)) -!muln_modl ?eqn_mul2r ?eqn0Ngt gcdn_gt0 //=.
-      Search gcdn dvdn.
+
+Abort.
 
 End LCG.
 
 Notation rseq cM' cA cC n x := (traject (@nextr cM' cA cC) x n).
 
 Definition lcg_rseq m a b :=
-  match m with
-    | m'.+1 =>
-      map (@nat_of_ord m'.+1)
-          (rseq m'
-                (@Ordinal m'.+1 (a %% m'.+1) (ltn_pmod a (ltn0Sn m')))
-                (@Ordinal m'.+1 (b %% m'.+1) (ltn_pmod b (ltn0Sn m')))
-                m
-                (@Ordinal m'.+1 0 (ltn0Sn m')))
-    | _ => [::]
-  end.
+  if m is m'.+1
+    then map (fun (x : 'Z_(cM m')) => x : nat) (rseq m' (inZp a) (inZp b) m Zp0)
+    else [::].
 
 Eval compute in (lcg_rseq 36 13 7).
 Eval compute in (lcg_rseq 8 1 3).
