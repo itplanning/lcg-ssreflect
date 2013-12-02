@@ -1,11 +1,14 @@
 Require Import
   Ssreflect.ssreflect Ssreflect.ssrfun Ssreflect.ssrbool Ssreflect.eqtype
   Ssreflect.ssrnat Ssreflect.seq Ssreflect.choice Ssreflect.fintype
-  MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial.
+  MathComp.div MathComp.path MathComp.bigop MathComp.prime MathComp.binomial
+  MathComp.ssralg MathComp.zmodp.
+
+Import GRing.Theory.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
-Import Prenex Implicits.
+Unset Printing Implicit Defensive.
 
 Lemma leqpp m n : m <= n -> m.-1 <= n.-1.
 Proof. by case: m => //=; case: n. Qed.
@@ -36,6 +39,13 @@ Lemma expSS a n :
 Proof.
   rewrite -add1n Pascal' exp1n add1n.
   by f_equal; apply eq_bigr => i _; rewrite exp1n mul1n.
+Qed.
+
+Lemma sum_expn_gt0 m a : (0 < \sum_(k < m) a ^ k) = (0 < m).
+Proof.
+  case: m => [| m].
+  - by rewrite big_ord0.
+  - by rewrite (big_ord_recl m) /= expn0 add1n.
 Qed.
 
 Lemma Fermat p x n : prime p -> x ^ p ^ n = x %[mod p].
@@ -106,23 +116,22 @@ Proof.
 Qed.
 
 Lemma LemmaQ m a l :
-  (forall p e l', (p, e) \in prime_decomp m ->
-                  (p ^ e %| \sum_(k < l') a ^ k <-> p ^ e %| l')) ->
-  (m %| \sum_(k < l) a ^ k <-> m %| l).
+  (forall l', all
+    (fun t => (t.1 ^ t.2 %| \sum_(k < l') a ^ k) == (t.1 ^ t.2 %| l'))
+    (prime_decomp m)) ->
+  (m %| \sum_(k < l) a ^ k) = (m %| l).
 Proof.
   case: m => [_ | m] /=.
-  - rewrite !dvd0n; case: l => [| l].
-    + by rewrite big_ord0.
-    + by rewrite (big_ord_recl l) /= expn0 add1n.
+  - by rewrite !dvd0n eqn0Ngt sum_expn_gt0; case: l.
   - rewrite {2 3}(@prod_prime_decomp m.+1 erefl) prime_decompE big_map /= => H.
     have {H} H p l': prime p -> p %| m.+1 ->
-      (p ^ logn p m.+1 %| \sum_(k < l') a ^ k <-> p ^ logn p m.+1 %| l')
-      by move => H0 H1; apply H, (map_f (fun p => (p, logn p m.+1)));
-         rewrite mem_primes H0.
-    have: forall p, p \in primes m.+1 -> prime p && (p %| m.+1)
+      (p ^ logn p m.+1 %| \sum_(k < l') a ^ k) = (p ^ logn p m.+1 %| l').
+      by move => H0 H1; apply (fun H2 => eqP (allP (H l') (p, logn p m.+1) H2));
+         apply (map_f (fun p => (p, logn p m.+1))); rewrite mem_primes H0.
+    have /=: forall p, p \in primes m.+1 -> prime p && (p %| m.+1)
       by move => p; rewrite mem_primes /=.
     elim: (primes m.+1) (primes_uniq m.+1) => /=.
-    + by rewrite big_nil.
+    + by rewrite big_nil !dvd1n.
     + move => p ps IH; case/andP => H0 H1 H2.
       case/andP: (H2 p (mem_head _ _)) => H3 H4.
       have H5: coprime (p ^ logn p m.+1) (\prod_(j <- ps) j ^ logn j m.+1).
@@ -135,12 +144,11 @@ Proof.
             case/andP: {H2'} (H2' erefl) => H6 H7.
           rewrite prime_coprime // dvdn_prime2 //.
           by apply/eqP => ?; subst i; rewrite H5 in H0.
-      rewrite big_cons !Gauss_dvd //.
-      split; case/andP => H6 H7; apply/andP; (split;
-        [ by apply H |
-          by apply IH => // p' H8; apply H2; rewrite inE H8 orbT ]).
+      rewrite big_cons !Gauss_dvd // H // IH // => p' H8; apply H2.
+      by rewrite inE H8 orbT.
 Qed.
 
+(*
 Lemma LemmaR' p a e l :
   prime p -> 0 < a -> 0 < e ->
   (forall l', p ^ e %| \sum_(k < l') a ^ k <-> l %| l') ->
@@ -173,6 +181,7 @@ Proof.
   - rewrite ltnS; move => /= H3 H2; apply: H3.
     admit.
 Abort.
+*)
 
 Lemma LemmaR p a e l :
   prime p -> 1 < a -> 2 < p ^ e ->
@@ -249,23 +258,21 @@ Qed.
 
 Section LCG.
 
-(* cM is LCG's modulus constant, 0 < cM *)
+(* cM is LCG's modulus constant, 1 < cM *)
 Variable (cM' : nat).
-Definition cM := cM'.+1.
+Definition cM := cM'.+2.
 
 (*
 cA is LCG's multiplier constant,
 cC is LCG's increment constant,
 cA, cC < cM (m : 'I_n means 0 <= m < n)
 *)
-Variable (cA cC : 'I_cM).
-
+Variable (cA cC : 'Z_cM).
 (*
 nextr x == (cA * x + cC) %% cM
            next random number of x
 *)
-Definition nextr (x : 'I_cM) : 'I_cM :=
-  @Ordinal cM ((cA * x + cC) %% cM) (ltn_pmod (cA * x + cC) (ltn0Sn cM')).
+Definition nextr (x : 'Z_cM) : 'Z_cM := (cA * x + cC)%R.
 
 (*
 rseq n x == [:: x; nextr x; nextr (nextr x); ...; iter n.-1 nextr x]
@@ -288,22 +295,20 @@ Definition full_period' :=
       if 4 %| cM then cA %% 4 == 1 else true].
 
 Lemma general_term_0 n :
-  iter n nextr (inord 0) =
-  @Ordinal cM (iter n (fun a => (a * cA).+1) 0 * cC %% cM)
-           (ltn_pmod _ (ltn0Sn cM')).
+  (iter n nextr 0%R) = (cC * \sum_(k < n) cA ^+ k)%R.
 Proof.
-  apply/eqP; rewrite /eq_op /=.
-  elim: n => /=.
-  - by rewrite inordK.
-  - move => n; move/eqP => /= ->.
-    by rewrite mulSn (addnC cC) eqn_modDr modnMmr mulnC mulnAC.
+  rewrite /nextr; elim: n => /= [| n ->].
+  - by rewrite big_ord0 mulr0.
+  - rewrite big_ord_recl /= expr0 mulrDr mulr1 addrC mulrCA big_distrr /=.
+    do 2 f_equal; apply eq_bigr => i _.
+    by rewrite /bump leq0n add1n exprS.
 Qed.
 
-Lemma fp_contains_all (n x : 'I_cM) : full_period n -> x \in rseq cM n.
+Lemma fp_contains_all (n x : 'Z_cM) : full_period n -> x \in rseq cM n.
 Proof.
   rewrite /full_period; case/andP; move/card_uniqP => H _.
   move: (leq_cardI (mem (rseq cM n)) (pred1 x)).
-  rewrite card_ord {}H size_traject addKn card1.
+  rewrite card_ord [X in _ - X]Zp_cast // {}H size_traject card1 addKn.
   case/card_gt0P => x'; rewrite inE /=.
   by case/andP => H; move/eqP => ?; subst x'.
 Qed.
@@ -313,15 +318,51 @@ Proof.
   split; first by apply.
   move => H y.
   case/andP: H (fp_contains_all y H) => H; move/eqP => H0.
-  rewrite /full_period.
   case/trajectP => i H1 H2.
-  rewrite {3}H2 -H0 -iter_add addnC iter_add -H2 eqxx andbT.
+  rewrite /full_period {3}H2 -H0 -iter_add addnC iter_add -H2 eqxx andbT.
   move: H; rewrite !looping_uniq /looping; apply contra.
   case/trajectP => j H3 H4.
   apply/trajectP; exists j => //; move: H4.
-  by rewrite -H0 H2 -!iter_add !(addnC cM') !(addnC j) -{6 8}(subnK (ltnW H1))
+  by rewrite -H0 H2 -!iter_add !(addnC cM'.+1) !(addnC j) -{6 8}(subnK (ltnW H1))
              -!(addnA (cM - i)) !(iter_add (cM - i)) => ->.
 Qed.
+
+Lemma fp_equiv2 :
+  full_period (inord 0) <->
+  forall m n, (m == n %[mod cM]) =
+              (iter m nextr (inord 0) == iter n nextr (inord 0)).
+Proof.
+  rewrite /full_period; split;
+    [ case/andP => H H0 m n | move => H; apply/andP; split ].
+  - rewrite (divn_eq m cM) (divn_eq n cM) !modnMDl !modn_mod.
+    elim: (m %/ cM) => [| md ->]; [elim: (n %/ cM) => [| nd ->] | ];
+      try by rewrite mulSnr addnAC (iter_add _ cM) (eqP H0).
+    by rewrite -!(nth_traject nextr (@ltn_pmod _ cM (ltn0Sn cM')))
+               nth_uniq // size_traject ltn_pmod.
+  - rewrite looping_uniq; apply/negP => H0.
+    case/trajectP: {H0} (loopingP H0 cM.-1) => i H0.
+    move/eqP; rewrite -H !modn_small //.
+    - by rewrite eq_sym ltn_eqF.
+    - by rewrite ltnW // ltnS.
+  - by move: (H cM 0); rewrite modnn mod0n eqxx; move/esym/eqP => ->.
+Qed.
+
+Lemma fp_equiv3 :
+  (forall m n, (m == n %[mod cM]) =
+               (iter m nextr (inord 0) == iter n nextr (inord 0))) <->
+  (coprime cM cC /\
+   forall m n, (m == n %[mod cM]) =
+               (\sum_(k < m) cA ^ k == \sum_(k < n) cA ^ k %[mod cM])).
+Proof.
+  (split => [H | [H H0]]; first split) => [ | m n | m n ].
+  - have {H} H m n: (m == n %[mod cM]) =
+        (\sum_(k < m) cA ^ k ==
+         \sum_(k < n) cA ^ k %[mod cM %/ gcdn cM cC]).
+      rewrite H eqE /= !general_term_0.
+      move: (dvdn_gcdl cM cC) (dvdn_gcdr cM cC); rewrite !dvdn_eq.
+      move/eqP => {9 12}<-; move/eqP => {1 4}<-.
+      rewrite !(mulnAC _ (gcdn _ _)) -!muln_modl ?eqn_mul2r ?eqn0Ngt gcdn_gt0 //=.
+      Search gcdn dvdn.
 
 End LCG.
 
