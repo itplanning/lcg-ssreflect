@@ -10,9 +10,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Lemma leqpp m n : m <= n -> m.-1 <= n.-1.
-Proof. by case: m => //=; case: n. Qed.
-
 Lemma dvdn_lmull d1 d2 m : d1 * d2 %| m -> d1 %| m.
 Proof.
   case/dvdnP => k ->.
@@ -50,7 +47,7 @@ Qed.
 
 Lemma Fermat p x n : prime p -> x ^ p ^ n = x %[mod p].
 Proof.
-  move: p => [] // [] // p H; elim: n x.
+  move: p => [| []] // p H; elim: n x.
   - by move => x; rewrite expn0 expn1.
   - move => n IH x; rewrite expnS expnM {}IH.
     elim: x {n} => // x IH.
@@ -65,7 +62,7 @@ Qed.
 Lemma LemmaP p e :
   prime p -> (p == 2) < logn p e -> logn p (e.+1 ^ p).-1 = (logn p e).+1.
 Proof.
-  move: p e => [] // [] // p [| []]; rewrite ?logn0 ?logn1 // => e H H0.
+  move: p e => [| []] // p [| []]; rewrite ?logn0 ?logn1 // => e H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
           big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0) big_map.
   have/(eq_bigr _) -> i: true ->
@@ -227,32 +224,20 @@ Qed.
 Lemma contains_zero p a e :
   prime p -> a %% p = 1 -> p ^ e %| \sum_(k < p ^ e) a ^ k.
 Proof.
-  move: p a => [| []] // p [| [| a]] // H H0.
+  move: p a => [| []] // p [| [| a]] // H.
   - by rewrite -(big_mkord xpredT) (eq_bigr _ (fun n _ => exp1n n))
                sum_nat_const_nat subn0 muln1.
-  - have: 0 < \sum_(k < p.+2 ^ e) a.+2 ^ k.
-      apply (@proj2 (0 < a.+2.-1)); apply/andP; rewrite -muln_gt0 -predn_exp.
-      apply (@leqpp 2), (@leq_trans a.+2) => //.
-      by rewrite -{1}(expn1 a.+2) leq_exp2l // expn_gt0.
-    move/eqP: H0.
-    rewrite -{1}(@modn_small 1 p.+2) // (eqn_modDl 1) mod0n -/(_ %| _) => H0 H1.
-    rewrite pfactor_dvdn // -(leq_add2l (logn p.+2 a.+2.-1)) -lognM //
-            -predn_exp /=.
-    case: p e H H0 {H1} => [[| e] _ H | p e H H0].
+  - move/eqP.
+    rewrite -{1}(@modn_small 1 p.+2) // (eqn_modDl 1) mod0n -/(_ %| _).
+    rewrite pfactor_dvdn -1?(leq_add2l (logn p.+2 a.+2.-1) e)
+            -?lognM ?sum_expn_gt0 ?expn_gt0 // -predn_exp /=.
+    case: p e H => [[| e] _ H | p e H H0].
     + by rewrite expn0 expn1 addn0.
     + rewrite
         expnS expnM (sqrnD 1) add1n addSn mul1n expnS expn1 -mulnDl LemmaP' //=.
       * by rewrite addnS lognM // -addnA (leq_add2r _ 1) lognE dvdn_addr.
       * by rewrite lognM // lognE dvdn_addr //= addSn addnC lognE H.
     + by rewrite LemmaP' //= lognE H H0.
-Qed.
-
-Lemma leq_cardI (T : finType) (x y : pred T) :
-  #|x| + #|y| - #|T| <= #|predI x y|.
-Proof.
-  rewrite -cardUI -addnC -subnBA.
-  - apply leq_subr.
-  - apply max_card.
 Qed.
 
 Section LCG.
@@ -267,6 +252,7 @@ cC is LCG's increment constant,
 cA, cC < cM (m : 'I_n means 0 <= m < n)
 *)
 Variable (cA cC : 'Z_cM).
+
 (*
 nextr x == (cA * x + cC) %% cM
            next random number of x
@@ -282,7 +268,7 @@ Notation rseq n x := (traject nextr x n).
 (*
 (forall x, full_period x) <=> LCG (cM, cA, cC) have a full period.
 *)
-Definition full_period n := uniq (rseq cM n) && (iter cM nextr n == n).
+Definition full_period x := uniq (rseq cM x) && (iter cM nextr x == x).
 
 (*
 full_period': equivalent proposition of (forall x, full_period x)
@@ -291,7 +277,7 @@ see: http://en.wikipedia.org/wiki/Linear_congruential_generator#Period_length
 Definition full_period' :=
   [&& coprime cM cC,
       all (fun p => cA %% p == 1) (primes cM) &
-      if 4 %| cM then cA %% 4 == 1 else true].
+      (4 %| cM) ==> (cA %% 4 == 1)].
 
 Lemma general_term_0 n :
   (iter n nextr 0%R) = (cC * \sum_(k < n) cA ^+ k)%R.
@@ -305,11 +291,9 @@ Qed.
 
 Lemma fp_contains_all (n x : 'Z_cM) : full_period n -> x \in rseq cM n.
 Proof.
-  rewrite /full_period; case/andP; move/card_uniqP => H _.
-  move: (leq_cardI (mem (rseq cM n)) (pred1 x)).
-  rewrite card_ord [X in _ - X]Zp_cast // {}H size_traject card1 addKn.
-  case/card_gt0P => x'; rewrite inE /=.
-  by case/andP => H; move/eqP => ?; subst x'.
+  rewrite /full_period; case/andP; move/card_uniqP.
+  rewrite size_traject -{6}(card_ord cM) => H _.
+  apply/(subset_cardP H); apply subset_predT.
 Qed.
 
 Lemma fp_equiv1 x : (forall y, full_period y) <-> full_period x.
@@ -342,15 +326,17 @@ Proof.
     move/eqP; rewrite -H !modn_small //.
     - by rewrite eq_sym ltn_eqF.
     - by rewrite ltnW // ltnS.
-  - by move: (H cM 0); rewrite modnn mod0n eqxx; move/esym/eqP => ->.
+  - by move: (H cM 0); rewrite modnn mod0n eqxx; move/esym => ->.
 Qed.
 
-Lemma fp_equiv3 :
+Lemma fp_equiv3:
   (forall m n, (m == n %[mod cM]) = (iter m nextr 0%R == iter n nextr 0%R)) <->
   (coprime cM cC /\
    forall m n, (m == n %[mod cM]) =
-               (\sum_(k < m) cA ^ k == \sum_(k < n) cA ^ k %[mod cM])).
+               (\sum_(k < m) cA ^+ k == \sum_(k < n) cA ^+ k)%R).
 Proof.
+  split => [H | [H H0]]; first split.
+  -
 
 Abort.
 
