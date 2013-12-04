@@ -21,21 +21,13 @@ Proof.
   by rewrite mulnC; apply dvdn_lmull.
 Qed.
 
-Lemma Pascal' a b n :
-  (a + b) ^ n.+1 = a ^ n.+1 + b ^ n.+1 +
-                   \sum_(1 <= i < n.+1) 'C(n.+1, i) * (a ^ (n.+1 - i) * b ^ i).
-Proof.
-  by rewrite
-    Pascal -(big_mkord xpredT (fun i => 'C(_, i) * (a ^ (_ - i) * b ^ i)))
-    /index_iota subn0 subn1 -(addn1 n.+1) iota_add add0n big_cat /= !big_cons
-    big_nil bin0 binn subnn !subn0 addn0 !expn0 !mul1n muln1 addnC addnCA addnA.
-Qed.
-
 Lemma expSS a n :
   a.+1 ^ n.+1 = (a ^ n.+1).+1 + \sum_(1 <= i < n.+1) 'C(n.+1, i) * a ^ i.
 Proof.
-  rewrite -add1n Pascal' exp1n add1n.
-  by f_equal; apply eq_bigr => i _; rewrite exp1n mul1n.
+  rewrite -add1n Pascal big_ord_recl big_ord_recr /= /bump /= !add1n
+          bin0 binn subn0 subnn !mul1n exp1n add1n -addnS addnC; f_equal.
+  rewrite (big_addn 0 n.+1 1) subn1 /= big_mkord.
+  by apply eq_bigr => m _; rewrite exp1n add1n addn1 mul1n.
 Qed.
 
 Lemma sum_expn_gt0 m a : (0 < \sum_(k < m) a ^ k) = (0 < m).
@@ -59,15 +51,15 @@ Proof.
     + by move => i H0; apply dvdn_mulr, prime_dvd_bin.
 Qed.
 
-Lemma LemmaP p e :
-  prime p -> (p == 2) < logn p e -> logn p (e.+1 ^ p).-1 = (logn p e).+1.
+Lemma LemmaP p x :
+  prime p -> (p == 2) < logn p x -> logn p (x.+1 ^ p).-1 = (logn p x).+1.
 Proof.
-  move: p e => [| []] // p [| []]; rewrite ?logn0 ?logn1 // => e H H0.
+  move: p x => [| []] // p [| []]; rewrite ?logn0 ?logn1 // => x H H0.
   rewrite expSS addSn /= /index_iota subn1 /= !expnS /=
           big_cons bin1 expn1 (mulnC p.+2) (iota_addl 2 0) big_map.
   have/(eq_bigr _) -> i: true ->
-      'C(p.+2, i.+2) * e.+2 ^ i.+2 = e.+2 * (e.+2 * ('C(p.+2, i.+2) * e.+2 ^ i))
-    by rewrite !expnS 2!(mulnCA e.+2).
+      'C(p.+2, i.+2) * x.+2 ^ i.+2 = x.+2 * (x.+2 * ('C(p.+2, i.+2) * x.+2 ^ i))
+    by rewrite !expnS 2!(mulnCA x.+2).
   rewrite -!big_distrr /= addnCA -!mulnDr lognM //= -[X in _ = X]addn1; f_equal.
   move: H0; rewrite lognE H /=; case: ifP => //.
   rewrite dvdn_eq; move/eqP/esym => H0 H1.
@@ -82,25 +74,25 @@ Proof.
         apply dvdn_add => //; apply dvdn_mulr, prime_dvd_bin.
 Qed.
 
-Lemma LemmaP' p e n :
-  prime p -> (p == 2) < logn p e -> logn p (e.+1 ^ p ^ n).-1 = logn p e + n.
+Lemma LemmaP' p x n :
+  prime p -> (p == 2) < logn p x -> logn p (x.+1 ^ p ^ n).-1 = logn p x + n.
 Proof.
   move => H H0.
   elim: n => // n IH.
-  rewrite expnSr expnM -(@prednK (e.+1 ^ _)) ?expn_gt0 // LemmaP // {}IH //.
+  rewrite expnSr expnM -(@prednK (x.+1 ^ _)) ?expn_gt0 // LemmaP // {}IH //.
   by apply ltn_addr.
 Qed.
 
 (*
-Lemma LemmaP'' p e n :
-  0 < e -> prime p -> p %| e.-1 ->
-  logn p (\sum_(k < p ^ n) e ^ k) =
-  (if (1 < e) && (0 < n) && (p == 2) then n.-1 + logn 2 e.+1 else n).
+Lemma LemmaP'' p x n :
+  0 < x -> prime p -> p %| x.-1 ->
+  logn p (\sum_(k < p ^ n) x ^ k) =
+  (if (1 < x) && (0 < n) && (p == 2) then n.-1 + logn 2 x.+1 else n).
 Proof.
-  move: p e => [| []] // p [| [| e]] //= _ H H0.
+  move: p x => [| []] // p [| [| x]] //= _ H H0.
   - by rewrite -(big_mkord xpredT) (eq_bigr _ (fun n _ => exp1n n))
                sum_nat_const_nat subn0 muln1 pfactorK.
-  - apply (@addnI (logn p.+2 e.+2.-1)).
+  - apply (@addnI (logn p.+2 x.+2.-1)).
     rewrite -lognM ?sum_expn_gt0 ?expn_gt0 // -predn_exp.
     case: p H H0 => [_ H | p H H0].
     + case: n => //= n.
@@ -112,7 +104,7 @@ Proof.
 Qed.
 *)
 
-Lemma LemmaQ m a l :
+Lemma LemmaQ' m a l :
   (forall l', all
     (fun t => (t.1 ^ t.2 %| \sum_(k < l') a ^ k) == (t.1 ^ t.2 %| l'))
     (prime_decomp m)) ->
@@ -122,7 +114,7 @@ Proof.
   - by rewrite !dvd0n eqn0Ngt sum_expn_gt0; case: l.
   - rewrite {2 3}(@prod_prime_decomp m.+1 erefl) prime_decompE big_map /= => H.
     have {H} H p l': prime p -> p %| m.+1 ->
-      (p ^ logn p m.+1 %| \sum_(k < l') a ^ k) = (p ^ logn p m.+1 %| l').
+      (p ^ logn p m.+1 %| \sum_(k < l') a ^ k) = (p ^ logn p m.+1 %| l')
       by move => H0 H1; apply (fun H2 => eqP (allP (H l') (p, logn p m.+1) H2));
          apply (map_f (fun p => (p, logn p m.+1))); rewrite mem_primes H0.
     have /=: forall p, p \in primes m.+1 -> prime p && (p %| m.+1)
@@ -131,18 +123,18 @@ Proof.
     + by rewrite big_nil !dvd1n.
     + move => p ps IH; case/andP => H0 H1 H2.
       case/andP: (H2 p (mem_head _ _)) => H3 H4.
-      have H5: coprime (p ^ logn p m.+1) (\prod_(j <- ps) j ^ logn j m.+1).
-        rewrite big_seq; apply big_ind => /=.
-        * apply coprimen1.
-        * by move => x y; rewrite coprime_mulr => ->.
-        * move => i H5.
-          apply coprime_expl, coprime_expr.
-          move: (H2 i); rewrite inE H5 orbT => H2';
-            case/andP: {H2'} (H2' erefl) => H6 H7.
-          rewrite prime_coprime // dvdn_prime2 //.
-          by apply/eqP => ?; subst i; rewrite H5 in H0.
-      rewrite big_cons !Gauss_dvd // H // IH // => p' H8; apply H2.
-      by rewrite inE H8 orbT.
+      suff H5: coprime (p ^ logn p m.+1) (\prod_(j <- ps) j ^ logn j m.+1).
+        rewrite big_cons !Gauss_dvd // H // IH // => p' H6; apply H2.
+        by rewrite inE H6 orbT.
+      rewrite big_seq; apply big_ind => /=.
+      * apply coprimen1.
+      * by move => x y; rewrite coprime_mulr => ->.
+      * move => i H5.
+        apply coprime_expl, coprime_expr.
+        move: (H2 i); rewrite inE H5 orbT => H2';
+          case/andP: {H2'} (H2' erefl) => H6 _.
+        rewrite prime_coprime // dvdn_prime2 //.
+        by apply/eqP => ?; subst i; rewrite H5 in H0.
 Qed.
 
 (*
@@ -293,7 +285,7 @@ Lemma fp_contains_all (n x : 'Z_cM) : full_period n -> x \in rseq cM n.
 Proof.
   rewrite /full_period; case/andP; move/card_uniqP.
   rewrite size_traject -{6}(card_ord cM) => H _.
-  apply/(subset_cardP H); apply subset_predT.
+  apply/(subset_cardP H)/subset_predT.
 Qed.
 
 Lemma fp_equiv1 x : (forall y, full_period y) <-> full_period x.
@@ -311,29 +303,25 @@ Proof.
 Qed.
 
 Lemma fp_equiv2 :
-  full_period 0%R <->
-  forall m n, (m == n %[mod cM]) = (iter m nextr 0%R == iter n nextr 0%R).
+  full_period 0%R <-> forall m, (cM %| m) = (iter m nextr 0%R == 0%R).
 Proof.
   rewrite /full_period; split;
-    [ case/andP => H H0 m n | move => H; apply/andP; split ].
-  - rewrite (divn_eq m cM) (divn_eq n cM) !modnMDl !modn_mod.
-    elim: (m %/ cM) => [| md ->]; [elim: (n %/ cM) => [| nd ->] | ];
-      try by rewrite mulSnr addnAC (iter_add _ cM) (eqP H0).
-    by rewrite -!(nth_traject nextr (@ltn_pmod _ cM (ltn0Sn cM')))
-               nth_uniq // size_traject ltn_pmod.
+    [case/andP => H H0 m | move => H; apply/andP; split ].
+  - rewrite {2}(divn_eq m cM).
+    elim: (m %/ cM) => [| md ->].
+    + by rewrite mul0n add0n -(nth_traject nextr (@ltn_pmod m cM erefl))
+                 (@nth_uniq _ 0 (rseq cM 0) _ 0)%R // size_traject ltn_pmod.
+    + by rewrite mulSnr addnAC (iter_add _ cM) (eqP H0).
   - rewrite looping_uniq; apply/negP => H0.
-    case/trajectP: {H0} (loopingP H0 cM.-1) => i H0.
-    move/eqP; rewrite -H !modn_small //.
-    - by rewrite eq_sym ltn_eqF.
-    - by rewrite ltnW // ltnS.
-  - by move: (H cM 0); rewrite modnn mod0n eqxx; move/esym => ->.
+    case/trajectP: {H0} (loopingP H0 cM.-1) => i H0; move/(f_equal nextr).
+    move/esym: (H cM); rewrite dvdnn; move/eqP => /= ->.
+    by move/esym/eqP; rewrite -(H i.+1) /dvdn modn_small.
+  - by rewrite -H.
 Qed.
 
 Lemma fp_equiv3:
-  (forall m n, (m == n %[mod cM]) = (iter m nextr 0%R == iter n nextr 0%R)) <->
-  (coprime cM cC /\
-   forall m n, (m == n %[mod cM]) =
-               (\sum_(k < m) cA ^+ k == \sum_(k < n) cA ^+ k)%R).
+  (forall m, (cM %| m) = (iter m nextr 0%R == 0%R)) <->
+  (coprime cM cC /\ forall m, (cM %| m) = (\sum_(k < m) cA ^+ k == 0)%R).
 Proof.
   split => [H | [H H0]]; first split.
   -
